@@ -62,68 +62,98 @@ const fromDoc = doc => ({
 // ─── Login Screen ─────────────────────────────────────────────────
 function LoginScreen({ onLogin }) {
   return (
-    <div style={{
-      background: "linear-gradient(145deg, #f0f4ff 0%, #fafafa 60%, #fff7ed 100%)",
-      minHeight: "100vh",
-      display: "flex",
-      flexDirection: "column",
-      alignItems: "center",
-      justifyContent: "center",
-      padding: 24,
-      fontFamily: "'Pretendard','Apple SD Gothic Neo',sans-serif",
-    }}>
-      {/* 카드 */}
-      <div style={{
-        background: "#fff",
-        borderRadius: 28,
-        padding: "44px 32px 36px",
-        width: "100%",
-        maxWidth: 360,
-        boxShadow: "0 8px 48px rgba(99,102,241,.10), 0 2px 12px rgba(0,0,0,.06)",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-      }}>
-        {/* 아이콘 */}
-        <div style={{
-          width: 72, height: 72, borderRadius: 22,
-          background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
-          display: "flex", alignItems: "center", justifyContent: "center",
-          fontSize: 34, marginBottom: 20,
-          boxShadow: "0 8px 24px rgba(99,102,241,.30)",
-        }}>🎁</div>
+      <div
+          style={{
+              background: "linear-gradient(145deg, #f0f4ff 0%, #fafafa 60%, #fff7ed 100%)",
+              minHeight: "100vh",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: 24,
+              fontFamily: "'Pretendard','Apple SD Gothic Neo',sans-serif",
+          }}
+      >
+          {/* 카드 */}
+          <div
+              style={{
+                  background: "#fff",
+                  borderRadius: 28,
+                  padding: "44px 32px 36px",
+                  width: "100%",
+                  maxWidth: 360,
+                  boxShadow: "0 8px 48px rgba(99,102,241,.10), 0 2px 12px rgba(0,0,0,.06)",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+              }}
+          >
+              {/* 아이콘 */}
+              <div
+                  style={{
+                      width: 72,
+                      height: 72,
+                      borderRadius: 22,
+                      background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: 34,
+                      marginBottom: 20,
+                      boxShadow: "0 8px 24px rgba(99,102,241,.30)",
+                  }}
+              >
+                  {" "}
+                  <img
+                      src="/image.png"
+                      alt="logo"
+                      style={{
+                          width: "100%",
+                          height: "100%",
+                          objectFit: "cover",
+                      }}
+                  />{" "}
+              </div>
 
-        <h1 style={{ fontSize: 22, fontWeight: 800, color: "#1e293b", margin: "0 0 6px", letterSpacing: -0.5 }}>
-          나의 앱테크
-        </h1>
-        <p style={{ color: "#94a3b8", fontSize: 14, margin: "0 0 32px", textAlign: "center", lineHeight: 1.6 }}>
-          앱테크 수익을 한눈에<br/>기록하고 관리해보세요
-        </p>
+              <h1 style={{ fontSize: 22, fontWeight: 800, color: "#1e293b", margin: "0 0 6px", letterSpacing: -0.5 }}>나의 앱테크</h1>
+              <p style={{ color: "#94a3b8", fontSize: 14, margin: "0 0 32px", textAlign: "center", lineHeight: 1.6 }}>
+                  앱테크 수익을 한눈에
+                  <br />
+                  기록하고 관리해보세요
+              </p>
 
-        {/* 카카오 로그인 버튼 */}
-        <button onClick={onLogin} style={{
-          display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
-          background: "#FEE500", color: "#191919",
-          border: "none", borderRadius: 14,
-          padding: "15px 0", fontSize: 15, fontWeight: 700,
-          cursor: "pointer", width: "100%",
-          boxShadow: "0 4px 16px rgba(254,229,0,.40)",
-          transition: "transform .1s, box-shadow .1s",
-        }}
-          onMouseDown={e => e.currentTarget.style.transform = "scale(.97)"}
-          onMouseUp={e => e.currentTarget.style.transform = "scale(1)"}
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="#191919">
-            <path d="M12 3C6.477 3 2 6.477 2 11c0 2.89 1.582 5.448 4 7.02V21l3.047-2.032C11.013 19.313 11.5 19.36 12 19.36 17.523 19.36 22 15.884 22 11S17.523 3 12 3z"/>
-          </svg>
-          카카오로 로그인
-        </button>
+              {/* 카카오 로그인 버튼 */}
+              <button
+                  onClick={onLogin}
+                  style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: 10,
+                      background: "#FEE500",
+                      color: "#191919",
+                      border: "none",
+                      borderRadius: 14,
+                      padding: "15px 0",
+                      fontSize: 15,
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      width: "100%",
+                      boxShadow: "0 4px 16px rgba(254,229,0,.40)",
+                      transition: "transform .1s, box-shadow .1s",
+                  }}
+                  onMouseDown={(e) => (e.currentTarget.style.transform = "scale(.97)")}
+                  onMouseUp={(e) => (e.currentTarget.style.transform = "scale(1)")}
+              >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="#191919">
+                      <path d="M12 3C6.477 3 2 6.477 2 11c0 2.89 1.582 5.448 4 7.02V21l3.047-2.032C11.013 19.313 11.5 19.36 12 19.36 17.523 19.36 22 15.884 22 11S17.523 3 12 3z" />
+                  </svg>
+                  카카오로 로그인
+              </button>
 
-        <p style={{ color: "#cbd5e1", fontSize: 11, marginTop: 20 }}>
-          로그인 시 개인정보 처리방침에 동의합니다
-        </p>
+              <p style={{ color: "#cbd5e1", fontSize: 11, marginTop: 20 }}>로그인 시 개인정보 처리방침에 동의합니다</p>
+          </div>
       </div>
-    </div>
   );
 }
 
@@ -360,196 +390,281 @@ export default function App() {
   if (!user) return <LoginScreen onLogin={kakaoLogin} />;
 
   return (
-    <div style={S.app}>
-      {/* Header */}
-      <div style={S.hdr}>
-        <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-          <div style={{ width:28, height:28, borderRadius:8, background:"linear-gradient(135deg,#6366f1,#8b5cf6)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:14 }}>🎁</div>
-          <h1 style={S.hTitle}>나의 앱테크</h1>
-        </div>
-        <div style={{ display:"flex", gap:7, alignItems:"center" }}>
-          {loading   && <span style={{ fontSize:11, color:"#f59e0b", fontWeight:600 }}>⏳ 로딩중</span>}
-          {!loading && !fbError && <span style={{ fontSize:11, color:"#16a34a", fontWeight:600 }}>● 연결됨</span>}
-          {fbError   && <span style={{ fontSize:11, color:"#ef4444", maxWidth:90, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }} title={fbError}>⚠️ 오류</span>}
-          <button style={{ background:"#f8fafc", border:"1px solid #e2e8f0", color:"#64748b", borderRadius:8, padding:"5px 9px", cursor:"pointer", fontSize:12 }} onClick={fetchAll}>↻</button>
-          {user.profileImg
-            ? <img src={user.profileImg} alt={user.nickname} style={{ width:28, height:28, borderRadius:"50%", objectFit:"cover", border:"2px solid #e2e8f0" }} />
-            : <div style={{ width:28, height:28, borderRadius:"50%", background:"linear-gradient(135deg,#6366f1,#8b5cf6)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:12, color:"#fff", fontWeight:700 }}>{user.nickname[0]}</div>
-          }
-          <button onClick={kakaoLogout} style={{ background:"#f8fafc", border:"1px solid #e2e8f0", color:"#94a3b8", borderRadius:8, padding:"5px 10px", cursor:"pointer", fontSize:11, fontWeight:600 }}>로그아웃</button>
-        </div>
-      </div>
-
-      {/* Tabs */}
-      <div style={S.tabs}>
-        {TABS.map(t=><button key={t} style={S.tab(tab===t)} onClick={()=>setTab(t)}>{t}</button>)}
-      </div>
-
-      {/* Date Nav */}
-      {tab!=="전체" && (
-        <div style={S.nav}>
-          <button style={S.navBtn} onClick={()=>navigate(-1)}>‹</button>
-          <span style={{ fontSize:15, fontWeight:700, color:"#1e293b" }}>{navLabel()}</span>
-          <button style={S.navBtn} onClick={()=>navigate(1)}>›</button>
-        </div>
-      )}
-
-      {/* Summary */}
-      <div style={S.sum}>
-        {/* 수령 완료 */}
-        <div style={{ background:"linear-gradient(135deg,#f0fdf4,#dcfce7)", borderRadius:14, padding:"14px 16px", marginBottom:10 }}>
-          <div style={{ fontSize:12, color:"#16a34a", fontWeight:600, marginBottom:4 }}>✅ 수령 완료</div>
-          <div style={{ fontSize:26, fontWeight:800, color:"#15803d", letterSpacing:-1 }}>{fmt(totalRcv)}</div>
-        </div>
-        {/* 미수령 */}
-        <div style={{ background:"#fffbeb", borderRadius:14, padding:"12px 16px", marginBottom: catBreak.length>0?12:0 }}>
-          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-            <span style={{ fontSize:12, color:"#d97706", fontWeight:600 }}>⏳ 미수령 대기</span>
-            <span style={{ fontSize:17, fontWeight:700, color:"#b45309" }}>{fmt(totalPend)}</span>
-          </div>
-        </div>
-        {/* 카테고리 분석 */}
-        {catBreak.length>0 && (
-          <div>
-            <div style={{ fontSize:11, color:"#94a3b8", fontWeight:600, marginBottom:8, letterSpacing:.3 }}>카테고리별 수익</div>
-            {catBreak.map(([cat,amt])=>{
-              const pct = totalRcv>0 ? Math.round(amt/totalRcv*100) : 0;
-              const c = CAT_COLORS[cat]||"#6b7280";
-              return (
-                <div key={cat} style={{ display:"flex", alignItems:"center", gap:8, marginBottom:6 }}>
-                  <div style={{ width:7,height:7,borderRadius:"50%",background:c,flexShrink:0 }}/>
-                  <span style={{ fontSize:11,color:"#64748b",width:48,flexShrink:0 }}>{cat}</span>
-                  <div style={{ flex:1,background:"#f1f5f9",borderRadius:6,height:6,overflow:"hidden" }}>
-                    <div style={{ width:pct+"%",height:"100%",background:c,borderRadius:6,transition:"width .4s" }}/>
+      <div style={S.app}>
+          {/* Header */}
+          <div style={S.hdr}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <div style={{ width: 28, height: 28, borderRadius: 8, background: "linear-gradient(135deg,#6366f1,#8b5cf6)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 }}>
+                      <img
+                          src="/image.png"
+                          alt="logo"
+                          style={{
+                              width: "100%",
+                              height: "100%",
+                              objectFit: "cover",
+                          }}
+                      />
                   </div>
-                  <span style={{ fontSize:11,color:"#1e293b",fontWeight:600,width:76,textAlign:"right",flexShrink:0 }}>{fmt(amt)}</span>
-                </div>
-              );
-            })}
+                  <h1 style={S.hTitle}>나의 앱테크</h1>
+              </div>
+              <div style={{ display: "flex", gap: 7, alignItems: "center" }}>
+                  {loading && <span style={{ fontSize: 11, color: "#f59e0b", fontWeight: 600 }}>⏳ 로딩중</span>}
+                  {!loading && !fbError && <span style={{ fontSize: 11, color: "#16a34a", fontWeight: 600 }}>● 연결됨</span>}
+                  {fbError && (
+                      <span style={{ fontSize: 11, color: "#ef4444", maxWidth: 90, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={fbError}>
+                          ⚠️ 오류
+                      </span>
+                  )}
+                  <button style={{ background: "#f8fafc", border: "1px solid #e2e8f0", color: "#64748b", borderRadius: 8, padding: "5px 9px", cursor: "pointer", fontSize: 12 }} onClick={fetchAll}>
+                      ↻
+                  </button>
+                  {user.profileImg ? (
+                      <img src={user.profileImg} alt={user.nickname} style={{ width: 28, height: 28, borderRadius: "50%", objectFit: "cover", border: "2px solid #e2e8f0" }} />
+                  ) : (
+                      <div style={{ width: 28, height: 28, borderRadius: "50%", background: "linear-gradient(135deg,#6366f1,#8b5cf6)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, color: "#fff", fontWeight: 700 }}>{user.nickname[0]}</div>
+                  )}
+                  <button onClick={kakaoLogout} style={{ background: "#f8fafc", border: "1px solid #e2e8f0", color: "#94a3b8", borderRadius: 8, padding: "5px 10px", cursor: "pointer", fontSize: 11, fontWeight: 600 }}>
+                      로그아웃
+                  </button>
+              </div>
           </div>
-        )}
-      </div>
 
-      {/* Filters */}
-      <div style={S.filt}>
-        {["전체","수령","미수령"].map(f=>(
-          <button key={f} style={S.fBtn(filterRcv===f)} onClick={()=>setFilterRcv(f)}>
-            {f==="수령"?"✅ 수령":f==="미수령"?"⏳ 미수령":"전체"}
-          </button>
-        ))}
-        <div style={{ width:1,background:"#e2e8f0",margin:"0 2px",flexShrink:0 }}/>
-        {CATEGORIES.map(c=>(
-          <button key={c} style={S.fBtn(filterCat===c)} onClick={()=>setFilterCat(c)}>{c}</button>
-        ))}
-      </div>
-
-      {/* List */}
-      {loading && (
-        <div style={{ textAlign:"center",padding:40 }}>
-          <div style={{ fontSize:28,marginBottom:8 }}>⏳</div>
-          <div style={{ color:"#94a3b8",fontSize:13 }}>데이터를 불러오는 중이에요</div>
-        </div>
-      )}
-      {!loading && grouped.length===0 && (
-        <div style={{ textAlign:"center",padding:48 }}>
-          <div style={{ fontSize:40,marginBottom:12 }}>🗂️</div>
-          <div style={{ color:"#94a3b8",fontSize:14,fontWeight:500 }}>항목이 없어요</div>
-          <div style={{ color:"#cbd5e1",fontSize:12,marginTop:4 }}>+ 버튼으로 등록해보세요</div>
-        </div>
-      )}
-
-      {grouped.map(([date, dayItems])=>(
-        <div key={date} style={S.grp}>
-          {/* 날짜 헤더 */}
-          <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 2px 5px" }}>
-            <span style={{ fontSize:12,color:"#94a3b8",fontWeight:700,letterSpacing:.3 }}>{fmtD(date)}</span>
-            <span style={{ fontSize:12,color:"#6366f1",fontWeight:700 }}>{fmt(dayItems.filter(i=>i.received).reduce((s,i)=>s+i.amount,0))}</span>
+          {/* Tabs */}
+          <div style={S.tabs}>
+              {TABS.map((t) => (
+                  <button key={t} style={S.tab(tab === t)} onClick={() => setTab(t)}>
+                      {t}
+                  </button>
+              ))}
           </div>
-          {dayItems.map(item=>(
-            <div key={item.id} style={S.card}>
-              {/* 카테고리 아이콘 */}
-              <div style={{
-                width:40, height:40, borderRadius:13,
-                background: CAT_BG[item.category]||"#f8fafc",
-                border:`1.5px solid ${CAT_COLORS[item.category]||"#6b7280"}22`,
-                display:"flex", alignItems:"center", justifyContent:"center",
-                fontSize:18, flexShrink:0,
-              }}>
-                {CAT_ICONS[item.category]||"🎁"}
+
+          {/* Date Nav */}
+          {tab !== "전체" && (
+              <div style={S.nav}>
+                  <button style={S.navBtn} onClick={() => navigate(-1)}>
+                      ‹
+                  </button>
+                  <span style={{ fontSize: 15, fontWeight: 700, color: "#1e293b" }}>{navLabel()}</span>
+                  <button style={S.navBtn} onClick={() => navigate(1)}>
+                      ›
+                  </button>
               </div>
-              {/* 내용 */}
-              <div style={{ flex:1, minWidth:0 }}>
-                <div style={{ fontSize:14,fontWeight:600,color:"#1e293b",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis" }}>{item.name}</div>
-                <div style={{ display:"flex",gap:5,alignItems:"center",marginTop:3 }}>
-                  <span style={S.badge(item.received)}>{item.received?"✓ 수령":"○ 미수령"}</span>
-                  <span style={{ fontSize:11,color:CAT_COLORS[item.category]||"#6b7280",fontWeight:500 }}>{item.category}</span>
-                </div>
+          )}
+
+          {/* Summary */}
+          <div style={S.sum}>
+              {/* 수령 완료 */}
+              <div style={{ background: "linear-gradient(135deg,#f0fdf4,#dcfce7)", borderRadius: 14, padding: "14px 16px", marginBottom: 10 }}>
+                  <div style={{ fontSize: 12, color: "#16a34a", fontWeight: 600, marginBottom: 4 }}>✅ 수령 완료</div>
+                  <div style={{ fontSize: 26, fontWeight: 800, color: "#15803d", letterSpacing: -1 }}>{fmt(totalRcv)}</div>
               </div>
-              {/* 금액 + 버튼 */}
-              <div style={{ display:"flex",flexDirection:"column",alignItems:"flex-end",gap:5,flexShrink:0 }}>
-                <span style={{ fontSize:15,fontWeight:700,color:item.received?"#16a34a":"#d97706" }}>{fmt(item.amount)}</span>
-                <div style={{ display:"flex",gap:1 }}>
-                  <button style={S.iconBtn} title={item.received?"수령 취소":"수령 완료"} onClick={()=>toggleRcv(item)}>{item.received?"↩":"✓"}</button>
-                  <button style={S.iconBtn} onClick={()=>{ setEditItem(item); setForm({date:item.date,name:item.name,amount:String(item.amount),received:item.received,category:item.category}); setShowAdd(true); }}>✏️</button>
-                  <button style={{ ...S.iconBtn,color:"#fca5a5" }} onClick={()=>handleDelete(item.id)}>🗑</button>
-                </div>
+              {/* 미수령 */}
+              <div style={{ background: "#fffbeb", borderRadius: 14, padding: "12px 16px", marginBottom: catBreak.length > 0 ? 12 : 0 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <span style={{ fontSize: 12, color: "#d97706", fontWeight: 600 }}>⏳ 미수령 대기</span>
+                      <span style={{ fontSize: 17, fontWeight: 700, color: "#b45309" }}>{fmt(totalPend)}</span>
+                  </div>
               </div>
-            </div>
+              {/* 카테고리 분석 */}
+              {catBreak.length > 0 && (
+                  <div>
+                      <div style={{ fontSize: 11, color: "#94a3b8", fontWeight: 600, marginBottom: 8, letterSpacing: 0.3 }}>카테고리별 수익</div>
+                      {catBreak.map(([cat, amt]) => {
+                          const pct = totalRcv > 0 ? Math.round((amt / totalRcv) * 100) : 0;
+                          const c = CAT_COLORS[cat] || "#6b7280";
+                          return (
+                              <div key={cat} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                                  <div style={{ width: 7, height: 7, borderRadius: "50%", background: c, flexShrink: 0 }} />
+                                  <span style={{ fontSize: 11, color: "#64748b", width: 48, flexShrink: 0 }}>{cat}</span>
+                                  <div style={{ flex: 1, background: "#f1f5f9", borderRadius: 6, height: 6, overflow: "hidden" }}>
+                                      <div style={{ width: pct + "%", height: "100%", background: c, borderRadius: 6, transition: "width .4s" }} />
+                                  </div>
+                                  <span style={{ fontSize: 11, color: "#1e293b", fontWeight: 600, width: 76, textAlign: "right", flexShrink: 0 }}>{fmt(amt)}</span>
+                              </div>
+                          );
+                      })}
+                  </div>
+              )}
+          </div>
+
+          {/* Filters */}
+          <div style={S.filt}>
+              {["전체", "수령", "미수령"].map((f) => (
+                  <button key={f} style={S.fBtn(filterRcv === f)} onClick={() => setFilterRcv(f)}>
+                      {f === "수령" ? "✅ 수령" : f === "미수령" ? "⏳ 미수령" : "전체"}
+                  </button>
+              ))}
+              <div style={{ width: 1, background: "#e2e8f0", margin: "0 2px", flexShrink: 0 }} />
+              {CATEGORIES.map((c) => (
+                  <button key={c} style={S.fBtn(filterCat === c)} onClick={() => setFilterCat(c)}>
+                      {c}
+                  </button>
+              ))}
+          </div>
+
+          {/* List */}
+          {loading && (
+              <div style={{ textAlign: "center", padding: 40 }}>
+                  <div style={{ fontSize: 28, marginBottom: 8 }}>⏳</div>
+                  <div style={{ color: "#94a3b8", fontSize: 13 }}>데이터를 불러오는 중이에요</div>
+              </div>
+          )}
+          {!loading && grouped.length === 0 && (
+              <div style={{ textAlign: "center", padding: 48 }}>
+                  <div style={{ fontSize: 40, marginBottom: 12 }}>🗂️</div>
+                  <div style={{ color: "#94a3b8", fontSize: 14, fontWeight: 500 }}>항목이 없어요</div>
+                  <div style={{ color: "#cbd5e1", fontSize: 12, marginTop: 4 }}>+ 버튼으로 등록해보세요</div>
+              </div>
+          )}
+
+          {grouped.map(([date, dayItems]) => (
+              <div key={date} style={S.grp}>
+                  {/* 날짜 헤더 */}
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 2px 5px" }}>
+                      <span style={{ fontSize: 12, color: "#94a3b8", fontWeight: 700, letterSpacing: 0.3 }}>{fmtD(date)}</span>
+                      <span style={{ fontSize: 12, color: "#6366f1", fontWeight: 700 }}>{fmt(dayItems.filter((i) => i.received).reduce((s, i) => s + i.amount, 0))}</span>
+                  </div>
+                  {dayItems.map((item) => (
+                      <div key={item.id} style={S.card}>
+                          {/* 카테고리 아이콘 */}
+                          <div
+                              style={{
+                                  width: 40,
+                                  height: 40,
+                                  borderRadius: 13,
+                                  background: CAT_BG[item.category] || "#f8fafc",
+                                  border: `1.5px solid ${CAT_COLORS[item.category] || "#6b7280"}22`,
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  fontSize: 18,
+                                  flexShrink: 0,
+                              }}
+                          >
+                              {CAT_ICONS[item.category] || "🎁"}
+                          </div>
+                          {/* 내용 */}
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ fontSize: 14, fontWeight: 600, color: "#1e293b", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{item.name}</div>
+                              <div style={{ display: "flex", gap: 5, alignItems: "center", marginTop: 3 }}>
+                                  <span style={S.badge(item.received)}>{item.received ? "✓ 수령" : "○ 미수령"}</span>
+                                  <span style={{ fontSize: 11, color: CAT_COLORS[item.category] || "#6b7280", fontWeight: 500 }}>{item.category}</span>
+                              </div>
+                          </div>
+                          {/* 금액 + 버튼 */}
+                          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 5, flexShrink: 0 }}>
+                              <span style={{ fontSize: 15, fontWeight: 700, color: item.received ? "#16a34a" : "#d97706" }}>{fmt(item.amount)}</span>
+                              <div style={{ display: "flex", gap: 1 }}>
+                                  <button style={S.iconBtn} title={item.received ? "수령 취소" : "수령 완료"} onClick={() => toggleRcv(item)}>
+                                      {item.received ? "↩" : "✓"}
+                                  </button>
+                                  <button
+                                      style={S.iconBtn}
+                                      onClick={() => {
+                                          setEditItem(item);
+                                          setForm({ date: item.date, name: item.name, amount: String(item.amount), received: item.received, category: item.category });
+                                          setShowAdd(true);
+                                      }}
+                                  >
+                                      ✏️
+                                  </button>
+                                  <button style={{ ...S.iconBtn, color: "#fca5a5" }} onClick={() => handleDelete(item.id)}>
+                                      🗑
+                                  </button>
+                              </div>
+                          </div>
+                      </div>
+                  ))}
+              </div>
           ))}
-        </div>
-      ))}
 
-      {/* FAB */}
-      <button style={S.fab} onClick={()=>{ setEditItem(null); setForm({date:today.toISOString().slice(0,10),name:"",amount:"",received:true,category:"음료"}); setShowAdd(true); }}>+</button>
+          {/* FAB */}
+          <button
+              style={S.fab}
+              onClick={() => {
+                  setEditItem(null);
+                  setForm({ date: today.toISOString().slice(0, 10), name: "", amount: "", received: true, category: "음료" });
+                  setShowAdd(true);
+              }}
+          >
+              +
+          </button>
 
-      {/* Toast */}
-      {toast && (
-        <div style={{
-          position:"fixed", bottom:100, left:"50%", transform:"translateX(-50%)",
-          background: toast.type==="success" ? "#16a34a" : "#ef4444",
-          color:"#fff", borderRadius:16, padding:"13px 24px",
-          fontSize:14, fontWeight:700, zIndex:999,
-          boxShadow:"0 8px 32px rgba(0,0,0,.18)",
-          display:"flex", alignItems:"center", gap:8,
-          animation:"slideUp .25s ease",
-          whiteSpace:"nowrap",
-        }}>
-          {toast.type==="success" ? "✅" : "❌"} {toast.msg}
-        </div>
-      )}
-      <style>{`
+          {/* Toast */}
+          {toast && (
+              <div
+                  style={{
+                      position: "fixed",
+                      bottom: 100,
+                      left: "50%",
+                      transform: "translateX(-50%)",
+                      background: toast.type === "success" ? "#16a34a" : "#ef4444",
+                      color: "#fff",
+                      borderRadius: 16,
+                      padding: "13px 24px",
+                      fontSize: 14,
+                      fontWeight: 700,
+                      zIndex: 999,
+                      boxShadow: "0 8px 32px rgba(0,0,0,.18)",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      animation: "slideUp .25s ease",
+                      whiteSpace: "nowrap",
+                  }}
+              >
+                  {toast.type === "success" ? "✅" : "❌"} {toast.msg}
+              </div>
+          )}
+          <style>{`
         @keyframes slideUp { from { opacity:0; transform:translateX(-50%) translateY(12px); } to { opacity:1; transform:translateX(-50%) translateY(0); } }
         ::-webkit-scrollbar { display: none; }
         input[type="date"]::-webkit-calendar-picker-indicator { opacity:.4; cursor:pointer; }
         input:focus, select:focus { border-color:#6366f1 !important; box-shadow:0 0 0 3px rgba(99,102,241,.12); }
       `}</style>
 
-      {/* Add/Edit Modal */}
-      {showAdd && (
-        <div style={S.modal} onClick={e=>{ if(e.target===e.currentTarget){setShowAdd(false);setEditItem(null);} }}>
-          <div style={S.mBox}>
-            {/* 핸들 바 */}
-            <div style={{ width:40, height:4, borderRadius:4, background:"#e2e8f0", margin:"0 auto 20px" }}/>
-            <div style={{ fontSize:17,fontWeight:800,marginBottom:20,color:"#1e293b" }}>{editItem?"✏️ 수정하기":"➕ 수익 등록"}</div>
-            <label style={S.lbl}>날짜</label>
-            <input type="date" style={S.inp} value={form.date} onChange={e=>setForm({...form,date:e.target.value})}/>
-            <label style={S.lbl}>항목명</label>
-            <input style={S.inp} placeholder="예: 스벅 아아 1잔" value={form.name} onChange={e=>setForm({...form,name:e.target.value})}/>
-            <label style={S.lbl}>금액 (원)</label>
-            <input type="number" style={S.inp} placeholder="예: 6500" value={form.amount} onChange={e=>setForm({...form,amount:e.target.value})}/>
-            <label style={S.lbl}>카테고리</label>
-            <select style={S.sel} value={form.category} onChange={e=>setForm({...form,category:e.target.value})}>
-              {CATEGORIES.filter(c=>c!=="전체").map(c=><option key={c}>{c}</option>)}
-            </select>
-            <label style={S.lbl}>수령 여부</label>
-            <div style={S.tgl}>
-              <button style={S.tBtn(form.received)}  onClick={()=>setForm({...form,received:true})}>✅ 수령 완료</button>
-              <button style={S.tBtn(!form.received)} onClick={()=>setForm({...form,received:false})}>⏳ 미수령</button>
-            </div>
-            <button style={S.saveBtn} onClick={handleSave}>저장하기</button>
-          </div>
-        </div>
-      )}
-    </div>
+          {/* Add/Edit Modal */}
+          {showAdd && (
+              <div
+                  style={S.modal}
+                  onClick={(e) => {
+                      if (e.target === e.currentTarget) {
+                          setShowAdd(false);
+                          setEditItem(null);
+                      }
+                  }}
+              >
+                  <div style={S.mBox}>
+                      {/* 핸들 바 */}
+                      <div style={{ width: 40, height: 4, borderRadius: 4, background: "#e2e8f0", margin: "0 auto 20px" }} />
+                      <div style={{ fontSize: 17, fontWeight: 800, marginBottom: 20, color: "#1e293b" }}>{editItem ? "✏️ 수정하기" : "➕ 수익 등록"}</div>
+                      <label style={S.lbl}>날짜</label>
+                      <input type="date" style={S.inp} value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
+                      <label style={S.lbl}>항목명</label>
+                      <input style={S.inp} placeholder="예: 스벅 아아 1잔" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+                      <label style={S.lbl}>금액 (원)</label>
+                      <input type="number" style={S.inp} placeholder="예: 6500" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} />
+                      <label style={S.lbl}>카테고리</label>
+                      <select style={S.sel} value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
+                          {CATEGORIES.filter((c) => c !== "전체").map((c) => (
+                              <option key={c}>{c}</option>
+                          ))}
+                      </select>
+                      <label style={S.lbl}>수령 여부</label>
+                      <div style={S.tgl}>
+                          <button style={S.tBtn(form.received)} onClick={() => setForm({ ...form, received: true })}>
+                              ✅ 수령 완료
+                          </button>
+                          <button style={S.tBtn(!form.received)} onClick={() => setForm({ ...form, received: false })}>
+                              ⏳ 미수령
+                          </button>
+                      </div>
+                      <button style={S.saveBtn} onClick={handleSave}>
+                          저장하기
+                      </button>
+                  </div>
+              </div>
+          )}
+      </div>
   );
 }
