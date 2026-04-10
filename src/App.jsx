@@ -1,670 +1,828 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { FB_PROJECT_ID, FB_API_KEY, KAKAO_JS_KEY } from "./config";
 
-const SAMPLE_DATA = [
-  { id: "s1",  date:"2026-03-18", name:"SK하이닉스 수익",        amount:120000, received:true,  category:"주식"  },
-  { id: "s2",  date:"2026-03-20", name:"스벅 아아 1잔",           amount:6500,   received:true,  category:"음료"  },
-  { id: "s3",  date:"2026-03-20", name:"콜라겐토너패드",          amount:15000,  received:true,  category:"뷰티"  },
-  { id: "s4",  date:"2026-03-20", name:"CU 3천원권",              amount:3000,   received:false, category:"편의점"},
-  { id: "s5",  date:"2026-03-20", name:"맥날 감튀쿠폰",           amount:3500,   received:false, category:"외식"  },
-  { id: "s6",  date:"2026-03-20", name:"메가커피 아아 2잔",       amount:8000,   received:true,  category:"음료"  },
-  { id: "s7",  date:"2026-03-23", name:"트리트먼트 1500ml",       amount:12000,  received:true,  category:"뷰티"  },
-  { id: "s8",  date:"2026-03-23", name:"씨유상품권 5천쿠",        amount:5000,   received:true,  category:"편의점"},
-  { id: "s9",  date:"2026-03-24", name:"스벅 아아 1잔",           amount:6500,   received:true,  category:"음료"  },
-  { id: "s10", date:"2026-03-24", name:"네페포 7천쿠",            amount:7000,   received:false, category:"외식"  },
-  { id: "s11", date:"2026-03-24", name:"더벤티 아아 1잔",         amount:3500,   received:true,  category:"음료"  },
-  { id: "s12", date:"2026-03-24", name:"씨유 5천쿠",              amount:5000,   received:true,  category:"편의점"},
-  { id: "s13", date:"2026-03-24", name:"GS 아아 XL 250원",        amount:250,    received:true,  category:"음료"  },
-  { id: "s14", date:"2026-03-24", name:"네페포 5천쿠",            amount:5000,   received:true,  category:"외식"  },
-  { id: "s15", date:"2026-03-24", name:"메가커피 아아 3잔",       amount:12000,  received:true,  category:"음료"  },
-  { id: "s16", date:"2026-03-26", name:"네페포 1천쿠",            amount:1000,   received:true,  category:"외식"  },
-  { id: "s17", date:"2026-03-26", name:"쿠팡기프트카드 수익",     amount:120000, received:true,  category:"현금"  },
-  { id: "s18", date:"2026-03-26", name:"메가커피 아아 2잔",       amount:8000,   received:true,  category:"음료"  },
-  { id: "s19", date:"2026-03-26", name:"BHC 1만쿠 (5천에 구매)", amount:5000,   received:true,  category:"외식"  },
-  { id: "s20", date:"2026-03-27", name:"스벅 아아 1잔",           amount:6500,   received:false, category:"음료"  },
-  { id: "s21", date:"2026-03-27", name:"네페포 6천포",            amount:6000,   received:true,  category:"외식"  },
-  { id: "s22", date:"2026-03-30", name:"컴포즈 1만원권",          amount:10000,  received:true,  category:"음료"  },
-  { id: "s23", date:"2026-03-30", name:"네페포 5천포",            amount:5000,   received:true,  category:"외식"  },
-  { id: "s24", date:"2026-03-30", name:"배민 5천쿠",              amount:5000,   received:false, category:"외식"  },
-  { id: "s25", date:"2026-03-30", name:"화랑미술제 2매",          amount:20000,  received:false, category:"문화"  },
-];
+// ─── Firestore REST helpers ───────────────────────────────────────────────────
+const FS_BASE = `https://firestore.googleapis.com/v1/projects/${FB_PROJECT_ID}/databases/(default)/documents`;
 
-const CATEGORIES = ["전체","음료","외식","편의점","뷰티","현금","주식","문화","기타"];
-const CAT_COLORS = { 음료:"#3b82f6", 외식:"#f59e0b", 편의점:"#10b981", 뷰티:"#ec4899", 현금:"#22c55e", 주식:"#ef4444", 문화:"#8b5cf6", 기타:"#6b7280" };
-const CAT_BG    = { 음료:"#eff6ff", 외식:"#fffbeb", 편의점:"#f0fdf4", 뷰티:"#fdf2f8", 현금:"#f0fdf4", 주식:"#fef2f2", 문화:"#f5f3ff", 기타:"#f8fafc" };
-const CAT_ICONS = { 음료:"☕", 외식:"🍜", 편의점:"🏪", 뷰티:"💄", 현금:"💵", 주식:"📈", 문화:"🎨", 기타:"🎁" };
-const TABS = ["일","주","월","년","전체"];
-
-const fmt  = n => n.toLocaleString("ko-KR")+"원";
-const fmtD = d => d.replace(/-/g,".");
-
-// ─── Firestore REST helpers ───────────────────────────────────────
-const fsUrl = (col, docId="") => {
-  const base = `https://firestore.googleapis.com/v1/projects/${FB_PROJECT_ID}/databases/(default)/documents/${col}`;
-  return docId ? `${base}/${docId}?key=${FB_API_KEY}` : `${base}?key=${FB_API_KEY}`;
-};
-const toDoc = item => ({ fields:{
-  date:     { stringValue: item.date },
-  name:     { stringValue: item.name },
-  amount:   { integerValue: String(item.amount) },
-  received: { booleanValue: item.received },
-  category: { stringValue: item.category },
-}});
-const fromDoc = doc => ({
-  id:       doc.name.split("/").pop(),
-  date:     doc.fields.date.stringValue,
-  name:     doc.fields.name.stringValue,
-  amount:   parseInt(doc.fields.amount.integerValue || doc.fields.amount.doubleValue || 0),
-  received: doc.fields.received.booleanValue,
-  category: doc.fields.category.stringValue,
-});
-
-// ─── Login Screen ─────────────────────────────────────────────────
-function LoginScreen({ onLogin }) {
-  return (
-      <div
-          style={{
-              background: "linear-gradient(145deg, #f0f4ff 0%, #fafafa 60%, #fff7ed 100%)",
-              minHeight: "100vh",
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              justifyContent: "center",
-              padding: 24,
-              fontFamily: "'Pretendard','Apple SD Gothic Neo',sans-serif",
-          }}
-      >
-          {/* 카드 */}
-          <div
-              style={{
-                  background: "#fff",
-                  borderRadius: 28,
-                  padding: "44px 32px 36px",
-                  width: "100%",
-                  maxWidth: 360,
-                  boxShadow: "0 8px 48px rgba(99,102,241,.10), 0 2px 12px rgba(0,0,0,.06)",
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-              }}
-          >
-              {/* 아이콘 */}
-              <div
-                  style={{
-                      width: 72,
-                      height: 72,
-                      borderRadius: 22,
-                      background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontSize: 34,
-                      marginBottom: 20,
-                      boxShadow: "0 8px 24px rgba(99,102,241,.30)",
-                  }}
-              >
-                  {" "}
-                  <img
-                      src="/image.png"
-                      alt="logo"
-                      style={{
-                          width: "100%",
-                          height: "100%",
-                          objectFit: "cover",
-                      }}
-                  />{" "}
-              </div>
-
-              <h1 style={{ fontSize: 22, fontWeight: 800, color: "#1e293b", margin: "0 0 6px", letterSpacing: -0.5 }}>나의 앱테크</h1>
-              <p style={{ color: "#94a3b8", fontSize: 14, margin: "0 0 32px", textAlign: "center", lineHeight: 1.6 }}>
-                  앱테크 수익을 한눈에
-                  <br />
-                  기록하고 관리해보세요
-              </p>
-
-              {/* 카카오 로그인 버튼 */}
-              <button
-                  onClick={onLogin}
-                  style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      gap: 10,
-                      background: "#FEE500",
-                      color: "#191919",
-                      border: "none",
-                      borderRadius: 14,
-                      padding: "15px 0",
-                      fontSize: 15,
-                      fontWeight: 700,
-                      cursor: "pointer",
-                      width: "100%",
-                      boxShadow: "0 4px 16px rgba(254,229,0,.40)",
-                      transition: "transform .1s, box-shadow .1s",
-                  }}
-                  onMouseDown={(e) => (e.currentTarget.style.transform = "scale(.97)")}
-                  onMouseUp={(e) => (e.currentTarget.style.transform = "scale(1)")}
-              >
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="#191919">
-                      <path d="M12 3C6.477 3 2 6.477 2 11c0 2.89 1.582 5.448 4 7.02V21l3.047-2.032C11.013 19.313 11.5 19.36 12 19.36 17.523 19.36 22 15.884 22 11S17.523 3 12 3z" />
-                  </svg>
-                  카카오로 로그인
-              </button>
-
-              <p style={{ color: "#cbd5e1", fontSize: 11, marginTop: 20 }}>로그인 시 개인정보 처리방침에 동의합니다</p>
-          </div>
-      </div>
-  );
+function fsUrl(col, id = "") {
+  return `${FS_BASE}/${col}${id ? "/" + id : ""}?key=${FB_API_KEY}`;
 }
 
+function toDoc(obj) {
+  const fields = {};
+  for (const [k, v] of Object.entries(obj)) {
+    if (v === null || v === undefined) fields[k] = { nullValue: null };
+    else if (typeof v === "boolean")   fields[k] = { booleanValue: v };
+    else if (typeof v === "number")    fields[k] = { integerValue: v };
+    else                               fields[k] = { stringValue: String(v) };
+  }
+  return { fields };
+}
+
+function fromDoc(doc) {
+  const obj = { id: doc.name?.split("/").pop() };
+  for (const [k, v] of Object.entries(doc.fields || {})) {
+    if      ("stringValue"  in v) obj[k] = v.stringValue;
+    else if ("integerValue" in v) obj[k] = Number(v.integerValue);
+    else if ("booleanValue" in v) obj[k] = v.booleanValue;
+    else                          obj[k] = null;
+  }
+  return obj;
+}
+
+async function patchDoc(col, id, fields) {
+  const mask = Object.keys(fields).map((k) => `updateMask.fieldPaths=${k}`).join("&");
+  const res = await fetch(`${FS_BASE}/${col}/${id}?${mask}&key=${FB_API_KEY}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(toDoc(fields)),
+  });
+  if (!res.ok) throw new Error(res.status);
+  return res.json();
+}
+
+// ─── Constants ────────────────────────────────────────────────────────────────
+const ZONES  = ["A구역", "B구역", "C구역", "D구역", "출구 근처", "입구 근처", "기타"];
+const COLORS = ["흰색", "검정", "회색", "은색", "빨강", "파랑", "노랑", "초록", "기타"];
+
+const STATUS_INFO = {
+  parked:      { label: "주차중",   color: "#3b82f6", bg: "#eff6ff" },
+  requested:   { label: "요청중",   color: "#f59e0b", bg: "#fef3c7" },
+  moving:      { label: "이동중",   color: "#16a34a", bg: "#f0fdf4" },
+  no_response: { label: "응답없음", color: "#ef4444", bg: "#fef2f2" },
+};
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+function maskCar(num = "") {
+  if (num.length <= 4) return num;
+  return "•".repeat(num.length - 4) + num.slice(-4);
+}
+
+const INP = {
+  width: "100%", padding: "10px 14px", border: "1px solid #e5e7eb",
+  borderRadius: 10, fontSize: 15, boxSizing: "border-box", background: "#fff",
+};
+
+// ─── Main App ─────────────────────────────────────────────────────────────────
 export default function App() {
   const [user, setUser] = useState(() => {
-    try { return JSON.parse(localStorage.getItem("kakao_user")); }
-    catch { return null; }
+    try { return JSON.parse(localStorage.getItem("pk_user")); } catch { return null; }
   });
-  const [items,    setItems]    = useState([]);
-  const [fbReady,  setFbReady]  = useState(false);
-  const [fbError,  setFbError]  = useState("");
-  const [loading,  setLoading]  = useState(true);
-  const [tab,      setTab]      = useState("월");
-  const [filterCat,setFilterCat]= useState("전체");
-  const [filterRcv,setFilterRcv]= useState("전체");
-  const [showAdd,  setShowAdd]  = useState(false);
-  const [editItem, setEditItem] = useState(null);
-  const [toast,    setToast]    = useState(null);
-  const [viewDate, setViewDate] = useState(new Date("2026-03-30"));
-  const [form, setForm] = useState({ date:"2026-03-30", name:"", amount:"", received:true, category:"음료" });
-  const today = new Date("2026-03-30");
+  const [parkings,     setParkings]     = useState([]);
+  const [myParking,    setMyParking]    = useState(null);
+  const [incomingReqs, setIncomingReqs] = useState([]);
+  const [loading,  setLoading]  = useState(false);
+  const [tab,      setTab]      = useState("list");
+  const [search,   setSearch]   = useState("");
+  const [showReg,  setShowReg]  = useState(false);
+  const [reqTarget,  setReqTarget]  = useState(null);
+  const [respTarget, setRespTarget] = useState(null);
+  const [toast, setToast] = useState(null);
+  const [form, setForm] = useState({
+    carNumber: "", carColor: "흰색", carType: "",
+    location: "A구역", expectedLeaveTime: "",
+  });
 
-  // ── Kakao SDK 초기화 (v1 팝업 방식) ──────────────────────────
-  useEffect(() => {
-    if (window.Kakao && !window.Kakao.isInitialized()) {
-      window.Kakao.init(KAKAO_JS_KEY);
+  const intervalRef = useRef(null);
+  const userRef     = useRef(user);
+  useEffect(() => { userRef.current = user; }, [user]);
+
+  function showToast(msg, type = "success") {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 3500);
+  }
+
+  // ── Firebase ─────────────────────────────────────────────────────────────────
+
+  async function fetchParkings() {
+    try {
+      const res = await fetch(fsUrl("parkings"));
+      if (!res.ok) throw new Error(res.status);
+      const data = await res.json();
+      const docs = (data.documents || []).map(fromDoc);
+      setParkings(docs);
+      return docs;
+    } catch { return []; }
+  }
+
+  async function fetchRequests(uid) {
+    if (!uid) return [];
+    try {
+      const res = await fetch(`${FS_BASE}:runQuery?key=${FB_API_KEY}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          structuredQuery: {
+            from: [{ collectionId: "requests" }],
+            where: {
+              compositeFilter: {
+                op: "AND",
+                filters: [
+                  { fieldFilter: { field: { fieldPath: "parkingUserId" }, op: "EQUAL", value: { stringValue: uid } } },
+                  { fieldFilter: { field: { fieldPath: "status" }, op: "EQUAL", value: { stringValue: "pending" } } },
+                ],
+              },
+            },
+          },
+        }),
+      });
+      const data = await res.json();
+      return (Array.isArray(data) ? data : [])
+        .filter((d) => d.document)
+        .map((d) => fromDoc(d.document));
+    } catch { return []; }
+  }
+
+  async function poll(u = userRef.current) {
+    const docs = await fetchParkings();
+    if (u) {
+      const mine = docs.find((p) => p.userId === u.id);
+      setMyParking(mine || null);
+      const reqs = await fetchRequests(u.id);
+      setIncomingReqs(reqs);
     }
-  }, []);
+  }
+
+  async function registerParking() {
+    if (!form.carNumber.trim())    return showToast("차량번호를 입력해주세요", "error");
+    if (!form.expectedLeaveTime)   return showToast("출차 예정 시간을 입력해주세요", "error");
+    setLoading(true);
+    try {
+      if (myParking) await fetch(fsUrl("parkings", myParking.id), { method: "DELETE" });
+      const res = await fetch(fsUrl("parkings"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(toDoc({
+          userId:             user.id,
+          nickname:           user.nickname,
+          profileImage:       user.profileImage || "",
+          carNumber:          form.carNumber.trim(),
+          carColor:           form.carColor,
+          carType:            form.carType.trim(),
+          location:           form.location,
+          expectedLeaveTime:  form.expectedLeaveTime,
+          status:             "parked",
+          lastRequesterId:    "",
+          lastRequesterNickname: "",
+          createdAt:          new Date().toISOString(),
+        })),
+      });
+      if (!res.ok) throw new Error(res.status);
+      showToast("차량이 등록되었습니다 ✓");
+      setShowReg(false);
+      setForm({ carNumber: "", carColor: "흰색", carType: "", location: "A구역", expectedLeaveTime: "" });
+      await poll();
+    } catch (e) { showToast("등록 실패: " + e.message, "error"); }
+    finally { setLoading(false); }
+  }
+
+  async function leaveParking() {
+    if (!myParking) return;
+    setLoading(true);
+    try {
+      await fetch(fsUrl("parkings", myParking.id), { method: "DELETE" });
+      setMyParking(null);
+      showToast("출차 완료되었습니다");
+      await poll();
+    } catch { showToast("오류가 발생했습니다", "error"); }
+    finally { setLoading(false); }
+  }
+
+  async function sendRequest(parking) {
+    if (parking.userId === user?.id)     return showToast("내 차량입니다", "error");
+    if (parking.status === "moving")     return showToast("이미 이동 중입니다", "error");
+    if (parking.status === "requested")  return showToast("이미 요청이 전송된 차량입니다", "error");
+    setLoading(true);
+    try {
+      await patchDoc("parkings", parking.id, {
+        status: "requested",
+        lastRequesterId: user.id,
+        lastRequesterNickname: user.nickname,
+      });
+      const res = await fetch(fsUrl("requests"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(toDoc({
+          parkingId:          parking.id,
+          parkingUserId:      parking.userId,
+          requesterId:        user.id,
+          requesterNickname:  user.nickname,
+          status:             "pending",
+          createdAt:          new Date().toISOString(),
+        })),
+      });
+      if (!res.ok) throw new Error(res.status);
+      showToast("요청을 보냈습니다! 응답을 기다려주세요 🔔");
+      setReqTarget(null);
+      await poll();
+    } catch { showToast("요청 전송 실패", "error"); }
+    finally { setLoading(false); }
+  }
+
+  async function respondToRequest(req, accept) {
+    setLoading(true);
+    try {
+      await patchDoc("requests", req.id, {
+        status: accept ? "accepted" : "declined",
+        respondedAt: new Date().toISOString(),
+      });
+      if (myParking) {
+        await patchDoc("parkings", myParking.id, {
+          status: accept ? "moving" : "parked",
+          lastRequesterId: "",
+          lastRequesterNickname: "",
+        });
+      }
+      showToast(accept ? "수락했습니다. 차량을 이동해주세요 🚗" : "거절했습니다");
+      setRespTarget(null);
+      setIncomingReqs((prev) => prev.filter((r) => r.id !== req.id));
+      await poll();
+      if (accept && myParking) {
+        const pid = myParking.id;
+        setTimeout(async () => {
+          await fetch(fsUrl("parkings", pid), { method: "DELETE" });
+          await poll();
+        }, 5 * 60 * 1000);
+      }
+    } catch { showToast("오류가 발생했습니다", "error"); }
+    finally { setLoading(false); }
+  }
+
+  // ── Kakao ─────────────────────────────────────────────────────────────────────
 
   function kakaoLogin() {
-    if (!window.Kakao?.isInitialized()) {
-      alert("카카오 SDK가 아직 로드되지 않았어요. 잠시 후 다시 시도해주세요.");
-      return;
-    }
+    if (!window.Kakao?.isInitialized()) window.Kakao.init(KAKAO_JS_KEY);
     window.Kakao.Auth.login({
-      success() {
+      success: () => {
         window.Kakao.API.request({
           url: "/v2/user/me",
-          success(res) {
+          success: (res) => {
             const u = {
-              id:         res.id,
-              nickname:   res.kakao_account?.profile?.nickname ?? "사용자",
-              profileImg: res.kakao_account?.profile?.thumbnail_image_url ?? null,
+              id: String(res.id),
+              nickname: res.kakao_account?.profile?.nickname || "익명",
+              profileImage: res.kakao_account?.profile?.thumbnail_image_url || "",
             };
             setUser(u);
-            localStorage.setItem("kakao_user", JSON.stringify(u));
+            localStorage.setItem("pk_user", JSON.stringify(u));
           },
-          fail() { alert("사용자 정보를 가져오지 못했어요."); },
         });
       },
-      fail(err) { alert("카카오 로그인 실패: " + JSON.stringify(err)); },
+      fail: () => showToast("로그인 실패", "error"),
     });
   }
 
   function kakaoLogout() {
-    if (window.Kakao?.Auth?.getAccessToken()) {
-      window.Kakao.Auth.logout();
-    }
+    if (window.Kakao?.Auth?.getAccessToken()) window.Kakao.Auth.logout();
     setUser(null);
-    localStorage.removeItem("kakao_user");
+    setMyParking(null);
+    localStorage.removeItem("pk_user");
   }
 
-  function showToast(msg, type="success") {
-    setToast({ msg, type });
-    setTimeout(() => setToast(null), 2800);
-  }
+  // ── Effects ───────────────────────────────────────────────────────────────────
 
-  // ── Firebase CRUD ──────────────────────────────────────────────
-  async function fetchAll() {
-    setLoading(true); setFbError("");
-    try {
-      const res  = await fetch(fsUrl("apptech"));
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error?.message || "Firestore 오류");
-      const docs = json.documents || [];
-      if (docs.length === 0 && !fbReady) {
-        await seedSample();
-      } else {
-        setItems(docs.map(fromDoc));
-        setFbReady(true);
-      }
-    } catch(e) {
-      setFbError(e.message);
-      setItems(SAMPLE_DATA);
-    }
-    setLoading(false);
-  }
+  useEffect(() => { poll(); }, [user]); // eslint-disable-line
 
-  async function seedSample() {
-    try {
-      await Promise.all(SAMPLE_DATA.map(item =>
-        fetch(fsUrl("apptech"), {
-          method:"POST", headers:{"Content-Type":"application/json"},
-          body: JSON.stringify(toDoc(item))
-        })
-      ));
-      await fetchAll();
-    } catch(e) { setItems(SAMPLE_DATA); setLoading(false); }
-  }
+  useEffect(() => {
+    if (!user) return;
+    const u = user;
+    intervalRef.current = setInterval(() => poll(u), 10000);
+    return () => clearInterval(intervalRef.current);
+  }, [user]); // eslint-disable-line
 
-  async function addItem(item) {
-    const res  = await fetch(fsUrl("apptech"), { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(toDoc(item)) });
-    const json = await res.json();
-    if (!res.ok) throw new Error(json.error?.message);
-    return json.name.split("/").pop();
-  }
-  async function updateItem(item) {
-    const fields = ["date","name","amount","received","category"].map(f=>`updateMask.fieldPaths=${f}`).join("&");
-    await fetch(`${fsUrl("apptech", item.id)}&${fields}`.replace("?key","?"+fields+"&key").replace(`?${fields}&key`, `?key`).replace("?key=", `?${fields}&key=`),
-      { method:"PATCH", headers:{"Content-Type":"application/json"}, body:JSON.stringify(toDoc(item)) });
-  }
-  async function deleteItem(id) {
-    await fetch(fsUrl("apptech", id), { method:"DELETE" });
-  }
+  // ── Derived ───────────────────────────────────────────────────────────────────
 
-  useEffect(() => { fetchAll(); }, []);
-
-  // ── Filtering ──────────────────────────────────────────────────
   const filtered = useMemo(() => {
-    let list = [...items];
-    if (filterRcv==="수령")  list = list.filter(i=>i.received);
-    if (filterRcv==="미수령") list = list.filter(i=>!i.received);
-    if (filterCat!=="전체")  list = list.filter(i=>i.category===filterCat);
-    const vd = viewDate;
-    if (tab==="일") {
-      const ds = vd.toISOString().slice(0,10);
-      list = list.filter(i=>i.date===ds);
-    } else if (tab==="주") {
-      const dow = vd.getDay();
-      const mon = new Date(vd); mon.setDate(vd.getDate()-(dow===0?6:dow-1));
-      const sun = new Date(mon); sun.setDate(mon.getDate()+6);
-      list = list.filter(i=>{ const d=new Date(i.date); return d>=mon&&d<=sun; });
-    } else if (tab==="월") {
-      list = list.filter(i=>i.date.startsWith(`${vd.getFullYear()}-${String(vd.getMonth()+1).padStart(2,"0")}`));
-    } else if (tab==="년") {
-      list = list.filter(i=>i.date.startsWith(String(vd.getFullYear())));
-    }
-    return list.sort((a,b)=>b.date.localeCompare(a.date));
-  }, [items, tab, filterCat, filterRcv, viewDate]);
+    if (!search) return parkings;
+    const q = search.toLowerCase();
+    return parkings.filter(
+      (p) =>
+        p.carNumber?.toLowerCase().includes(q) ||
+        p.carColor?.includes(q) ||
+        p.carType?.toLowerCase().includes(q) ||
+        p.location?.includes(q) ||
+        p.nickname?.includes(q)
+    );
+  }, [parkings, search]);
 
-  const totalRcv  = filtered.filter(i=>i.received).reduce((s,i)=>s+i.amount,0);
-  const totalPend = filtered.filter(i=>!i.received).reduce((s,i)=>s+i.amount,0);
-
-  const catBreak = useMemo(()=>{
-    const m={};
-    filtered.filter(i=>i.received).forEach(i=>{ m[i.category]=(m[i.category]||0)+i.amount; });
-    return Object.entries(m).sort((a,b)=>b[1]-a[1]);
-  },[filtered]);
-
-  const grouped = useMemo(()=>{
-    const m={};
-    filtered.forEach(i=>{ (m[i.date]||(m[i.date]=[])).push(i); });
-    return Object.entries(m).sort((a,b)=>b[0].localeCompare(a[0]));
-  },[filtered]);
-
-  function navLabel() {
-    const vd=viewDate;
-    if (tab==="일") return `${vd.getFullYear()}.${vd.getMonth()+1}.${vd.getDate()}`;
-    if (tab==="주") {
-      const dow=vd.getDay(), mon=new Date(vd); mon.setDate(vd.getDate()-(dow===0?6:dow-1));
-      const sun=new Date(mon); sun.setDate(mon.getDate()+6);
-      return `${mon.getMonth()+1}/${mon.getDate()} ~ ${sun.getMonth()+1}/${sun.getDate()}`;
-    }
-    if (tab==="월") return `${vd.getFullYear()}년 ${vd.getMonth()+1}월`;
-    if (tab==="년") return `${vd.getFullYear()}년`;
-    return "전체";
-  }
-  function navigate(dir) {
-    const vd=new Date(viewDate);
-    if (tab==="일") vd.setDate(vd.getDate()+dir);
-    else if (tab==="주") vd.setDate(vd.getDate()+dir*7);
-    else if (tab==="월") vd.setMonth(vd.getMonth()+dir);
-    else if (tab==="년") vd.setFullYear(vd.getFullYear()+dir);
-    setViewDate(vd);
-  }
-
-  async function handleSave() {
-    if (!form.name || !form.amount) return;
-    const item = { ...form, amount:parseInt(form.amount) };
-    try {
-      if (editItem) {
-        item.id = editItem.id;
-        await updateItem(item);
-        setItems(prev=>prev.map(i=>i.id===item.id?item:i));
-      } else {
-        item.id = "tmp";
-        const newId = await addItem(item);
-        item.id = newId;
-        setItems(prev=>[...prev, item]);
-      }
-    } catch(e) { alert("저장 실패: "+e.message); }
-    showToast(editItem ? "수정이 완료됐어요! ✏️" : "수익이 등록됐어요! 🎉");
-    setShowAdd(false); setEditItem(null);
-    setForm({ date:today.toISOString().slice(0,10), name:"", amount:"", received:true, category:"음료" });
-  }
-  async function handleDelete(id) {
-    if (!confirm("삭제하시겠어요?")) return;
-    try { await deleteItem(id); } catch(e) {}
-    setItems(prev=>prev.filter(i=>i.id!==id));
-  }
-  async function toggleRcv(item) {
-    const u={...item,received:!item.received};
-    try { await updateItem(u); } catch(e) {}
-    setItems(prev=>prev.map(i=>i.id===item.id?u:i));
-  }
-
-  // ─── Styles (라이트 테마) ──────────────────────────────────────
-  const S = {
-    app:    { background:"#f8fafc", minHeight:"100vh", color:"#1e293b", fontFamily:"'Pretendard','Apple SD Gothic Neo',sans-serif", paddingBottom:96 },
-    hdr:    { background:"#fff", borderBottom:"1px solid #f1f5f9", padding:"13px 18px", display:"flex", alignItems:"center", justifyContent:"space-between", position:"sticky", top:0, zIndex:50, boxShadow:"0 1px 8px rgba(0,0,0,.05)" },
-    hTitle: { fontSize:17, fontWeight:800, color:"#1e293b", margin:0, letterSpacing:-0.5 },
-    tabs:   { display:"flex", background:"#fff", borderBottom:"1px solid #f1f5f9", padding:"0 16px" },
-    tab:  a => ({ padding:"12px 14px", border:"none", background:"none", color:a?"#6366f1":"#94a3b8", fontWeight:a?700:500, fontSize:14, cursor:"pointer", borderBottom:a?"2.5px solid #6366f1":"2.5px solid transparent", transition:"color .15s" }),
-    nav:    { display:"flex", alignItems:"center", justifyContent:"space-between", padding:"10px 18px", background:"#fff", borderBottom:"1px solid #f1f5f9" },
-    navBtn: { background:"#f8fafc", border:"1px solid #e2e8f0", color:"#475569", borderRadius:10, padding:"6px 16px", cursor:"pointer", fontSize:16, fontWeight:500 },
-    sum:    { margin:"14px 16px 0", background:"#fff", borderRadius:20, padding:"20px", boxShadow:"0 2px 12px rgba(0,0,0,.06)" },
-    filt:   { display:"flex", gap:7, padding:"12px 16px", overflowX:"auto", scrollbarWidth:"none" },
-    fBtn: a => ({ padding:"6px 13px", borderRadius:20, border:"1.5px solid", borderColor:a?"#6366f1":"#e2e8f0", background:a?"#6366f1":"#fff", color:a?"#fff":"#64748b", fontSize:12, cursor:"pointer", whiteSpace:"nowrap", fontWeight:a?600:400, transition:"all .15s" }),
-    grp:    { margin:"0 16px 2px" },
-    card:   { background:"#fff", borderRadius:16, padding:"13px 14px", marginBottom:8, display:"flex", alignItems:"center", gap:12, boxShadow:"0 1px 6px rgba(0,0,0,.06)", border:"1px solid #f1f5f9" },
-    fab:    { position:"fixed", bottom:28, right:22, width:56, height:56, borderRadius:"50%", background:"linear-gradient(135deg,#6366f1,#8b5cf6)", border:"none", color:"#fff", fontSize:26, cursor:"pointer", boxShadow:"0 6px 24px rgba(99,102,241,.45)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:100 },
-    modal:  { position:"fixed", inset:0, background:"rgba(15,17,25,.5)", zIndex:200, display:"flex", alignItems:"flex-end", backdropFilter:"blur(4px)" },
-    mBox:   { background:"#fff", borderRadius:"24px 24px 0 0", padding:"24px 20px 48px", width:"100%", maxWidth:480, margin:"0 auto", boxShadow:"0 -8px 40px rgba(0,0,0,.12)" },
-    inp:    { width:"100%", background:"#f8fafc", border:"1.5px solid #e2e8f0", borderRadius:12, padding:"11px 14px", color:"#1e293b", fontSize:14, marginBottom:13, boxSizing:"border-box", outline:"none" },
-    sel:    { width:"100%", background:"#f8fafc", border:"1.5px solid #e2e8f0", borderRadius:12, padding:"11px 14px", color:"#1e293b", fontSize:14, marginBottom:13, boxSizing:"border-box", outline:"none" },
-    saveBtn:{ width:"100%", padding:"14px", background:"linear-gradient(135deg,#6366f1,#8b5cf6)", border:"none", borderRadius:14, color:"#fff", fontWeight:700, fontSize:15, cursor:"pointer", boxShadow:"0 4px 16px rgba(99,102,241,.35)" },
-    lbl:    { fontSize:12, color:"#94a3b8", marginBottom:6, display:"block", fontWeight:600, letterSpacing:.3 },
-    tgl:    { display:"flex", gap:8, marginBottom:13 },
-    tBtn: a => ({ flex:1, padding:10, borderRadius:12, border:"1.5px solid", borderColor:a?"#6366f1":"#e2e8f0", background:a?"#eff0fe":"#fff", color:a?"#6366f1":"#94a3b8", fontWeight:600, cursor:"pointer", fontSize:13, transition:"all .15s" }),
-    badge: r => ({ fontSize:10, padding:"3px 7px", borderRadius:10, background:r?"#f0fdf4":"#fffbeb", color:r?"#16a34a":"#d97706", fontWeight:700, border: r?"1px solid #bbf7d0":"1px solid #fde68a" }),
-    iconBtn:{ background:"none", border:"none", color:"#cbd5e1", cursor:"pointer", fontSize:14, padding:"3px 6px", borderRadius:8 },
-  };
+  // ── Render ────────────────────────────────────────────────────────────────────
 
   if (!user) return <LoginScreen onLogin={kakaoLogin} />;
 
   return (
-      <div style={S.app}>
-          {/* Header */}
-          <div style={S.hdr}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <div style={{ width: 28, height: 28, borderRadius: 8, background: "linear-gradient(135deg,#6366f1,#8b5cf6)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 }}>
-                      <img
-                          src="/image.png"
-                          alt="logo"
-                          style={{
-                              width: "100%",
-                              height: "100%",
-                              objectFit: "cover",
-                          }}
-                      />
-                  </div>
-                  <h1 style={S.hTitle}>나의 앱테크</h1>
-              </div>
-              <div style={{ display: "flex", gap: 7, alignItems: "center" }}>
-                  {loading && <span style={{ fontSize: 11, color: "#f59e0b", fontWeight: 600 }}>⏳ 로딩중</span>}
-                  {!loading && !fbError && <span style={{ fontSize: 11, color: "#16a34a", fontWeight: 600 }}>● 연결됨</span>}
-                  {fbError && (
-                      <span style={{ fontSize: 11, color: "#ef4444", maxWidth: 90, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={fbError}>
-                          ⚠️ 오류
-                      </span>
-                  )}
-                  <button style={{ background: "#f8fafc", border: "1px solid #e2e8f0", color: "#64748b", borderRadius: 8, padding: "5px 9px", cursor: "pointer", fontSize: 12 }} onClick={fetchAll}>
-                      ↻
-                  </button>
-                  {user.profileImg ? (
-                      <img src={user.profileImg} alt={user.nickname} style={{ width: 28, height: 28, borderRadius: "50%", objectFit: "cover", border: "2px solid #e2e8f0" }} />
-                  ) : (
-                      <div style={{ width: 28, height: 28, borderRadius: "50%", background: "linear-gradient(135deg,#6366f1,#8b5cf6)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, color: "#fff", fontWeight: 700 }}>{user.nickname[0]}</div>
-                  )}
-                  <button onClick={kakaoLogout} style={{ background: "#f8fafc", border: "1px solid #e2e8f0", color: "#94a3b8", borderRadius: 8, padding: "5px 10px", cursor: "pointer", fontSize: 11, fontWeight: 600 }}>
-                      로그아웃
-                  </button>
-              </div>
+    <div style={{ minHeight: "100svh", background: "#f8fafc", fontFamily: "system-ui, -apple-system, sans-serif" }}>
+
+      {/* ── Header ── */}
+      <header style={{ background: "#fff", borderBottom: "1px solid #e5e7eb", padding: "12px 16px", position: "sticky", top: 0, zIndex: 100 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <img src="/image.png" alt="" style={{ width: 34, height: 34, borderRadius: 10 }} />
+          <div style={{ flex: 1 }}>
+            <div style={{ fontWeight: 800, fontSize: 17, color: "#1e293b", lineHeight: 1.2 }}>파킹톡</div>
+            <div style={{ fontSize: 11, color: "#64748b" }}>영덕레스피아 주차장</div>
           </div>
-
-          {/* Tabs */}
-          <div style={S.tabs}>
-              {TABS.map((t) => (
-                  <button key={t} style={S.tab(tab === t)} onClick={() => setTab(t)}>
-                      {t}
-                  </button>
-              ))}
-          </div>
-
-          {/* Date Nav */}
-          {tab !== "전체" && (
-              <div style={S.nav}>
-                  <button style={S.navBtn} onClick={() => navigate(-1)}>
-                      ‹
-                  </button>
-                  <span style={{ fontSize: 15, fontWeight: 700, color: "#1e293b" }}>{navLabel()}</span>
-                  <button style={S.navBtn} onClick={() => navigate(1)}>
-                      ›
-                  </button>
-              </div>
-          )}
-
-          {/* Summary */}
-          <div style={S.sum}>
-              {/* 수령 완료 */}
-              <div style={{ background: "linear-gradient(135deg,#f0fdf4,#dcfce7)", borderRadius: 14, padding: "14px 16px", marginBottom: 10 }}>
-                  <div style={{ fontSize: 12, color: "#16a34a", fontWeight: 600, marginBottom: 4 }}>✅ 수령 완료</div>
-                  <div style={{ fontSize: 26, fontWeight: 800, color: "#15803d", letterSpacing: -1 }}>{fmt(totalRcv)}</div>
-              </div>
-              {/* 미수령 */}
-              <div style={{ background: "#fffbeb", borderRadius: 14, padding: "12px 16px", marginBottom: catBreak.length > 0 ? 12 : 0 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <span style={{ fontSize: 12, color: "#d97706", fontWeight: 600 }}>⏳ 미수령 대기</span>
-                      <span style={{ fontSize: 17, fontWeight: 700, color: "#b45309" }}>{fmt(totalPend)}</span>
-                  </div>
-              </div>
-              {/* 카테고리 분석 */}
-              {catBreak.length > 0 && (
-                  <div>
-                      <div style={{ fontSize: 11, color: "#94a3b8", fontWeight: 600, marginBottom: 8, letterSpacing: 0.3 }}>카테고리별 수익</div>
-                      {catBreak.map(([cat, amt]) => {
-                          const pct = totalRcv > 0 ? Math.round((amt / totalRcv) * 100) : 0;
-                          const c = CAT_COLORS[cat] || "#6b7280";
-                          return (
-                              <div key={cat} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-                                  <div style={{ width: 7, height: 7, borderRadius: "50%", background: c, flexShrink: 0 }} />
-                                  <span style={{ fontSize: 11, color: "#64748b", width: 48, flexShrink: 0 }}>{cat}</span>
-                                  <div style={{ flex: 1, background: "#f1f5f9", borderRadius: 6, height: 6, overflow: "hidden" }}>
-                                      <div style={{ width: pct + "%", height: "100%", background: c, borderRadius: 6, transition: "width .4s" }} />
-                                  </div>
-                                  <span style={{ fontSize: 11, color: "#1e293b", fontWeight: 600, width: 76, textAlign: "right", flexShrink: 0 }}>{fmt(amt)}</span>
-                              </div>
-                          );
-                      })}
-                  </div>
-              )}
-          </div>
-
-          {/* Filters */}
-          <div style={S.filt}>
-              {["전체", "수령", "미수령"].map((f) => (
-                  <button key={f} style={S.fBtn(filterRcv === f)} onClick={() => setFilterRcv(f)}>
-                      {f === "수령" ? "✅ 수령" : f === "미수령" ? "⏳ 미수령" : "전체"}
-                  </button>
-              ))}
-              <div style={{ width: 1, background: "#e2e8f0", margin: "0 2px", flexShrink: 0 }} />
-              {CATEGORIES.map((c) => (
-                  <button key={c} style={S.fBtn(filterCat === c)} onClick={() => setFilterCat(c)}>
-                      {c}
-                  </button>
-              ))}
-          </div>
-
-          {/* List */}
-          {loading && (
-              <div style={{ textAlign: "center", padding: 40 }}>
-                  <div style={{ fontSize: 28, marginBottom: 8 }}>⏳</div>
-                  <div style={{ color: "#94a3b8", fontSize: 13 }}>데이터를 불러오는 중이에요</div>
-              </div>
-          )}
-          {!loading && grouped.length === 0 && (
-              <div style={{ textAlign: "center", padding: 48 }}>
-                  <div style={{ fontSize: 40, marginBottom: 12 }}>🗂️</div>
-                  <div style={{ color: "#94a3b8", fontSize: 14, fontWeight: 500 }}>항목이 없어요</div>
-                  <div style={{ color: "#cbd5e1", fontSize: 12, marginTop: 4 }}>+ 버튼으로 등록해보세요</div>
-              </div>
-          )}
-
-          {grouped.map(([date, dayItems]) => (
-              <div key={date} style={S.grp}>
-                  {/* 날짜 헤더 */}
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 2px 5px" }}>
-                      <span style={{ fontSize: 12, color: "#94a3b8", fontWeight: 700, letterSpacing: 0.3 }}>{fmtD(date)}</span>
-                      <span style={{ fontSize: 12, color: "#6366f1", fontWeight: 700 }}>{fmt(dayItems.filter((i) => i.received).reduce((s, i) => s + i.amount, 0))}</span>
-                  </div>
-                  {dayItems.map((item) => (
-                      <div key={item.id} style={S.card}>
-                          {/* 카테고리 아이콘 */}
-                          <div
-                              style={{
-                                  width: 40,
-                                  height: 40,
-                                  borderRadius: 13,
-                                  background: CAT_BG[item.category] || "#f8fafc",
-                                  border: `1.5px solid ${CAT_COLORS[item.category] || "#6b7280"}22`,
-                                  display: "flex",
-                                  alignItems: "center",
-                                  justifyContent: "center",
-                                  fontSize: 18,
-                                  flexShrink: 0,
-                              }}
-                          >
-                              {CAT_ICONS[item.category] || "🎁"}
-                          </div>
-                          {/* 내용 */}
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                              <div style={{ fontSize: 14, fontWeight: 600, color: "#1e293b", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{item.name}</div>
-                              <div style={{ display: "flex", gap: 5, alignItems: "center", marginTop: 3 }}>
-                                  <span style={S.badge(item.received)}>{item.received ? "✓ 수령" : "○ 미수령"}</span>
-                                  <span style={{ fontSize: 11, color: CAT_COLORS[item.category] || "#6b7280", fontWeight: 500 }}>{item.category}</span>
-                              </div>
-                          </div>
-                          {/* 금액 + 버튼 */}
-                          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 5, flexShrink: 0 }}>
-                              <span style={{ fontSize: 15, fontWeight: 700, color: item.received ? "#16a34a" : "#d97706" }}>{fmt(item.amount)}</span>
-                              <div style={{ display: "flex", gap: 1 }}>
-                                  <button style={S.iconBtn} title={item.received ? "수령 취소" : "수령 완료"} onClick={() => toggleRcv(item)}>
-                                      {item.received ? "↩" : "✓"}
-                                  </button>
-                                  <button
-                                      style={S.iconBtn}
-                                      onClick={() => {
-                                          setEditItem(item);
-                                          setForm({ date: item.date, name: item.name, amount: String(item.amount), received: item.received, category: item.category });
-                                          setShowAdd(true);
-                                      }}
-                                  >
-                                      ✏️
-                                  </button>
-                                  <button style={{ ...S.iconBtn, color: "#fca5a5" }} onClick={() => handleDelete(item.id)}>
-                                      🗑
-                                  </button>
-                              </div>
-                          </div>
-                      </div>
-                  ))}
-              </div>
-          ))}
-
-          {/* FAB */}
+          {/* Bell */}
           <button
-              style={S.fab}
-              onClick={() => {
-                  setEditItem(null);
-                  setForm({ date: today.toISOString().slice(0, 10), name: "", amount: "", received: true, category: "음료" });
-                  setShowAdd(true);
-              }}
+            onClick={() => incomingReqs.length && setRespTarget(incomingReqs[0])}
+            style={{ position: "relative", background: "none", border: "none", cursor: "pointer", padding: 6, fontSize: 20, lineHeight: 1 }}
           >
-              +
+            🔔
+            {incomingReqs.length > 0 && (
+              <span style={{
+                position: "absolute", top: 2, right: 2, background: "#ef4444", color: "#fff",
+                borderRadius: "50%", width: 16, height: 16, fontSize: 10, fontWeight: 700,
+                display: "flex", alignItems: "center", justifyContent: "center",
+              }}>
+                {incomingReqs.length}
+              </span>
+            )}
           </button>
-
-          {/* Toast */}
-          {toast && (
-              <div
-                  style={{
-                      position: "fixed",
-                      bottom: 100,
-                      left: "50%",
-                      transform: "translateX(-50%)",
-                      background: toast.type === "success" ? "#16a34a" : "#ef4444",
-                      color: "#fff",
-                      borderRadius: 16,
-                      padding: "13px 24px",
-                      fontSize: 14,
-                      fontWeight: 700,
-                      zIndex: 999,
-                      boxShadow: "0 8px 32px rgba(0,0,0,.18)",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 8,
-                      animation: "slideUp .25s ease",
-                      whiteSpace: "nowrap",
-                  }}
-              >
-                  {toast.type === "success" ? "✅" : "❌"} {toast.msg}
-              </div>
+          {user.profileImage && (
+            <img src={user.profileImage} alt="" style={{ width: 30, height: 30, borderRadius: "50%", border: "2px solid #e5e7eb" }} />
           )}
-          <style>{`
-        @keyframes slideUp { from { opacity:0; transform:translateX(-50%) translateY(12px); } to { opacity:1; transform:translateX(-50%) translateY(0); } }
-        ::-webkit-scrollbar { display: none; }
-        input[type="date"]::-webkit-calendar-picker-indicator { opacity:.4; cursor:pointer; }
-        input:focus, select:focus { border-color:#6366f1 !important; box-shadow:0 0 0 3px rgba(99,102,241,.12); }
-      `}</style>
+          <button
+            onClick={kakaoLogout}
+            style={{ background: "none", border: "1px solid #e5e7eb", borderRadius: 8, padding: "5px 10px", fontSize: 12, cursor: "pointer", color: "#64748b" }}
+          >
+            로그아웃
+          </button>
+        </div>
+      </header>
 
-          {/* Add/Edit Modal */}
-          {showAdd && (
-              <div
-                  style={S.modal}
-                  onClick={(e) => {
-                      if (e.target === e.currentTarget) {
-                          setShowAdd(false);
-                          setEditItem(null);
-                      }
-                  }}
-              >
-                  <div style={S.mBox}>
-                      {/* 핸들 바 */}
-                      <div style={{ width: 40, height: 4, borderRadius: 4, background: "#e2e8f0", margin: "0 auto 20px" }} />
-                      <div style={{ fontSize: 17, fontWeight: 800, marginBottom: 20, color: "#1e293b" }}>{editItem ? "✏️ 수정하기" : "➕ 수익 등록"}</div>
-                      <label style={S.lbl}>날짜</label>
-                      <input type="date" style={S.inp} value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
-                      <label style={S.lbl}>항목명</label>
-                      <input style={S.inp} placeholder="예: 스벅 아아 1잔" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-                      <label style={S.lbl}>금액 (원)</label>
-                      <input type="number" style={S.inp} placeholder="예: 6500" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} />
-                      <label style={S.lbl}>카테고리</label>
-                      <select style={S.sel} value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
-                          {CATEGORIES.filter((c) => c !== "전체").map((c) => (
-                              <option key={c}>{c}</option>
-                          ))}
-                      </select>
-                      <label style={S.lbl}>수령 여부</label>
-                      <div style={S.tgl}>
-                          <button style={S.tBtn(form.received)} onClick={() => setForm({ ...form, received: true })}>
-                              ✅ 수령 완료
-                          </button>
-                          <button style={S.tBtn(!form.received)} onClick={() => setForm({ ...form, received: false })}>
-                              ⏳ 미수령
-                          </button>
-                      </div>
-                      <button style={S.saveBtn} onClick={handleSave}>
-                          저장하기
-                      </button>
-                  </div>
-              </div>
-          )}
+      {/* ── Incoming request banner ── */}
+      {incomingReqs.length > 0 && (
+        <div style={{ background: "#fef3c7", borderBottom: "1px solid #fde68a", padding: "10px 16px" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <span style={{ fontSize: 14, color: "#92400e", fontWeight: 600 }}>
+              🔔 {incomingReqs[0].requesterNickname}님이 차량 이동을 요청했습니다
+            </span>
+            <button
+              onClick={() => setRespTarget(incomingReqs[0])}
+              style={{ background: "#f59e0b", color: "#fff", border: "none", borderRadius: 8, padding: "6px 14px", fontSize: 13, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap", marginLeft: 10 }}
+            >
+              응답하기
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Tabs ── */}
+      <div style={{ background: "#fff", borderBottom: "1px solid #e5e7eb" }}>
+        <div style={{ display: "flex" }}>
+          {[["list", "주차 현황"], ["mine", "내 차량"]].map(([k, label]) => (
+            <button
+              key={k}
+              onClick={() => setTab(k)}
+              style={{
+                flex: 1, padding: "13px 0", border: "none", background: "none", cursor: "pointer",
+                fontSize: 14, fontWeight: tab === k ? 700 : 400,
+                color: tab === k ? "#3b82f6" : "#64748b",
+                borderBottom: `2px solid ${tab === k ? "#3b82f6" : "transparent"}`,
+              }}
+            >
+              {label}
+              {k === "mine" && myParking && (
+                <span style={{ marginLeft: 6, background: "#3b82f6", color: "#fff", borderRadius: 10, fontSize: 11, padding: "1px 6px" }}>등록</span>
+              )}
+            </button>
+          ))}
+        </div>
       </div>
+
+      {/* ── Content ── */}
+      <div style={{ padding: 16 }}>
+
+        {tab === "list" && (
+          <>
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="차량번호, 색상, 위치로 검색..."
+              style={{ ...INP, marginBottom: 14 }}
+            />
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16 }}>
+              <StatBox label="주차 차량" value={parkings.length}                                   color="#3b82f6" bg="#eff6ff" />
+              <StatBox label="이동 중"   value={parkings.filter((p) => p.status === "moving").length} color="#16a34a" bg="#f0fdf4" />
+            </div>
+            {filtered.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "52px 0", color: "#94a3b8" }}>
+                <div style={{ fontSize: 52 }}>🚗</div>
+                <div style={{ marginTop: 12, fontSize: 15 }}>
+                  {parkings.length === 0 ? "등록된 차량이 없습니다" : "검색 결과가 없습니다"}
+                </div>
+                {parkings.length === 0 && (
+                  <div style={{ fontSize: 13, marginTop: 6, color: "#cbd5e1" }}>주차 후 아래 버튼으로 차량을 등록하세요</div>
+                )}
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {filtered.map((p) => (
+                  <ParkingCard
+                    key={p.id}
+                    parking={p}
+                    userId={user.id}
+                    onRequest={() => setReqTarget(p)}
+                  />
+                ))}
+              </div>
+            )}
+          </>
+        )}
+
+        {tab === "mine" && (
+          <MyTab
+            myParking={myParking}
+            loading={loading}
+            requests={incomingReqs}
+            onRegister={() => setShowReg(true)}
+            onLeave={leaveParking}
+            onRespond={setRespTarget}
+          />
+        )}
+      </div>
+
+      {/* ── FAB ── */}
+      {!myParking && (
+        <button
+          onClick={() => setShowReg(true)}
+          style={{
+            position: "fixed", bottom: 24, left: "50%", transform: "translateX(-50%)",
+            background: "linear-gradient(135deg,#3b82f6,#2563eb)", color: "#fff",
+            border: "none", borderRadius: 24, padding: "14px 28px",
+            fontSize: 15, fontWeight: 700, cursor: "pointer",
+            boxShadow: "0 4px 16px rgba(59,130,246,.4)", whiteSpace: "nowrap",
+          }}
+        >
+          🚗 내 차량 등록하기
+        </button>
+      )}
+
+      {/* ── Register Modal ── */}
+      {showReg && (
+        <Modal onClose={() => setShowReg(false)} title="내 차량 등록">
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <Field label="차량번호 *">
+              <input
+                value={form.carNumber}
+                onChange={(e) => setForm((f) => ({ ...f, carNumber: e.target.value }))}
+                placeholder="예: 123가4567"
+                style={INP}
+              />
+            </Field>
+            <Field label="차량 색상">
+              <select value={form.carColor} onChange={(e) => setForm((f) => ({ ...f, carColor: e.target.value }))} style={INP}>
+                {COLORS.map((c) => <option key={c}>{c}</option>)}
+              </select>
+            </Field>
+            <Field label="차종 (선택)">
+              <input
+                value={form.carType}
+                onChange={(e) => setForm((f) => ({ ...f, carType: e.target.value }))}
+                placeholder="예: SUV, 세단, 트럭..."
+                style={INP}
+              />
+            </Field>
+            <Field label="주차 위치">
+              <select value={form.location} onChange={(e) => setForm((f) => ({ ...f, location: e.target.value }))} style={INP}>
+                {ZONES.map((z) => <option key={z}>{z}</option>)}
+              </select>
+            </Field>
+            <Field label="출차 예정 시간 *">
+              <input
+                type="time"
+                value={form.expectedLeaveTime}
+                onChange={(e) => setForm((f) => ({ ...f, expectedLeaveTime: e.target.value }))}
+                style={INP}
+              />
+            </Field>
+            <button
+              onClick={registerParking}
+              disabled={loading}
+              style={{
+                background: "linear-gradient(135deg,#3b82f6,#2563eb)", color: "#fff",
+                border: "none", borderRadius: 12, padding: 14,
+                fontSize: 16, fontWeight: 700, cursor: "pointer", marginTop: 4,
+                opacity: loading ? 0.7 : 1,
+              }}
+            >
+              {loading ? "등록 중..." : "등록 완료"}
+            </button>
+          </div>
+        </Modal>
+      )}
+
+      {/* ── Request Confirm Modal ── */}
+      {reqTarget && (
+        <Modal onClose={() => setReqTarget(null)} title="이동 요청">
+          <div style={{ textAlign: "center" }}>
+            <div style={{ fontSize: 52, marginBottom: 14 }}>🚗</div>
+            <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 8 }}>
+              {maskCar(reqTarget.carNumber)} 차량에 이동 요청
+            </div>
+            <div style={{ fontSize: 14, color: "#64748b", marginBottom: 4 }}>위치: {reqTarget.location}</div>
+            <div style={{ fontSize: 14, color: "#64748b", marginBottom: 28 }}>
+              {reqTarget.nickname}님에게 알림을 보냅니다
+            </div>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button
+                onClick={() => setReqTarget(null)}
+                style={{ flex: 1, padding: 13, border: "1px solid #e5e7eb", borderRadius: 12, background: "#fff", fontSize: 15, cursor: "pointer" }}
+              >
+                취소
+              </button>
+              <button
+                onClick={() => sendRequest(reqTarget)}
+                disabled={loading}
+                style={{
+                  flex: 1, padding: 13, background: "linear-gradient(135deg,#f59e0b,#d97706)",
+                  color: "#fff", border: "none", borderRadius: 12,
+                  fontSize: 15, fontWeight: 700, cursor: "pointer", opacity: loading ? 0.7 : 1,
+                }}
+              >
+                {loading ? "전송 중..." : "요청 보내기"}
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* ── Response Modal ── */}
+      {respTarget && (
+        <Modal onClose={() => setRespTarget(null)} title="이동 요청 도착">
+          <div style={{ textAlign: "center" }}>
+            <div style={{ fontSize: 52, marginBottom: 14 }}>🔔</div>
+            <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 10 }}>
+              {respTarget.requesterNickname}님이<br />차량 이동을 요청했습니다
+            </div>
+            <div style={{ fontSize: 14, color: "#64748b", marginBottom: 28 }}>어떻게 하시겠어요?</div>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button
+                onClick={() => respondToRequest(respTarget, false)}
+                disabled={loading}
+                style={{
+                  flex: 1, padding: 13, border: "2px solid #ef4444", borderRadius: 12,
+                  background: "#fff", fontSize: 14, fontWeight: 600, cursor: "pointer", color: "#ef4444",
+                  opacity: loading ? 0.7 : 1,
+                }}
+              >
+                지금은 못 빼요
+              </button>
+              <button
+                onClick={() => respondToRequest(respTarget, true)}
+                disabled={loading}
+                style={{
+                  flex: 1, padding: 13, background: "linear-gradient(135deg,#16a34a,#15803d)",
+                  color: "#fff", border: "none", borderRadius: 12,
+                  fontSize: 14, fontWeight: 700, cursor: "pointer", opacity: loading ? 0.7 : 1,
+                }}
+              >
+                지금 빼러 갈게요!
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* ── Toast ── */}
+      {toast && (
+        <div style={{
+          position: "fixed", bottom: 80, left: "50%", transform: "translateX(-50%)",
+          background: toast.type === "error" ? "#ef4444" : "#1e293b",
+          color: "#fff", padding: "12px 20px", borderRadius: 12,
+          fontSize: 14, zIndex: 999, whiteSpace: "nowrap",
+          boxShadow: "0 4px 12px rgba(0,0,0,.2)",
+        }}>
+          {toast.msg}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Sub-components ───────────────────────────────────────────────────────────
+
+function LoginScreen({ onLogin }) {
+  return (
+    <div style={{
+      minHeight: "100svh", display: "flex", flexDirection: "column",
+      alignItems: "center", justifyContent: "center",
+      background: "#f8fafc", padding: 24, textAlign: "center",
+    }}>
+      <img
+        src="/image.png"
+        alt=""
+        style={{ width: 90, height: 90, borderRadius: 24, marginBottom: 22, boxShadow: "0 8px 24px rgba(59,130,246,.2)" }}
+      />
+      <h1 style={{ fontSize: 30, fontWeight: 800, margin: "0 0 8px", color: "#1e293b" }}>파킹톡</h1>
+      <p style={{ color: "#64748b", margin: "0 0 6px", fontSize: 15 }}>영덕레스피아 공원 주차장</p>
+      <p style={{ color: "#94a3b8", margin: "0 0 44px", fontSize: 13, lineHeight: 1.7 }}>
+        전화 없이 빠르게 차 이동 요청<br />이중주차 문제를 쉽게 해결하세요
+      </p>
+      <button
+        onClick={onLogin}
+        style={{
+          background: "#FEE500", color: "#191919", border: "none", borderRadius: 14,
+          padding: "15px 36px", fontSize: 16, fontWeight: 700, cursor: "pointer",
+          display: "flex", alignItems: "center", gap: 10,
+          boxShadow: "0 4px 14px rgba(254,229,0,.5)",
+        }}
+      >
+        <span style={{ fontSize: 22 }}>💬</span>
+        카카오로 시작하기
+      </button>
+      <p style={{ marginTop: 20, fontSize: 12, color: "#cbd5e1" }}>
+        로그인 시 차량 등록 및 요청 기능이 활성화됩니다
+      </p>
+    </div>
+  );
+}
+
+function StatBox({ label, value, color, bg }) {
+  return (
+    <div style={{ background: bg, borderRadius: 14, padding: 14, textAlign: "center" }}>
+      <div style={{ fontSize: 28, fontWeight: 800, color }}>{value}</div>
+      <div style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>{label}</div>
+    </div>
+  );
+}
+
+function ParkingCard({ parking, userId, onRequest }) {
+  const st = STATUS_INFO[parking.status] || STATUS_INFO.parked;
+  const isOwner     = parking.userId === userId;
+  const iRequested  = parking.lastRequesterId === userId;
+
+  return (
+    <div style={{
+      background: "#fff", borderRadius: 16, padding: 16,
+      boxShadow: "0 1px 4px rgba(0,0,0,.06)", border: "1px solid #f1f5f9",
+    }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
+        <div>
+          <div style={{ fontSize: 20, fontWeight: 800, color: "#1e293b", letterSpacing: 1 }}>
+            {maskCar(parking.carNumber) || "번호 미등록"}
+          </div>
+          <div style={{ fontSize: 13, color: "#64748b", marginTop: 2 }}>
+            {parking.carColor}{parking.carType ? ` · ${parking.carType}` : ""}
+          </div>
+        </div>
+        <span style={{
+          background: st.bg, color: st.color,
+          fontSize: 12, fontWeight: 600, padding: "4px 10px", borderRadius: 20,
+          whiteSpace: "nowrap",
+        }}>
+          {st.label}
+        </span>
+      </div>
+
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 14, marginBottom: 12 }}>
+        <span style={{ fontSize: 13, color: "#475569" }}>📍 {parking.location}</span>
+        <span style={{ fontSize: 13, color: "#475569" }}>
+          🕐 {parking.expectedLeaveTime ? `${parking.expectedLeaveTime} 출차 예정` : "출차 시간 미정"}
+        </span>
+      </div>
+
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <span style={{ fontSize: 12, color: "#94a3b8" }}>{parking.nickname}</span>
+        {isOwner ? (
+          <span style={{ fontSize: 12, fontWeight: 600, color: "#3b82f6", background: "#eff6ff", padding: "4px 10px", borderRadius: 20 }}>
+            내 차량
+          </span>
+        ) : parking.status === "moving" ? (
+          <span style={{ fontSize: 13, color: "#16a34a", fontWeight: 600 }}>이동 중...</span>
+        ) : iRequested ? (
+          <span style={{ fontSize: 13, color: "#f59e0b", fontWeight: 600 }}>응답 대기 중...</span>
+        ) : parking.status === "requested" ? (
+          <span style={{ fontSize: 13, color: "#94a3b8" }}>다른 요청 처리 중</span>
+        ) : (
+          <button
+            onClick={onRequest}
+            style={{
+              background: "linear-gradient(135deg,#f59e0b,#d97706)", color: "#fff",
+              border: "none", borderRadius: 10, padding: "8px 14px",
+              fontSize: 13, fontWeight: 600, cursor: "pointer",
+            }}
+          >
+            차 빼기 요청
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function MyTab({ myParking, loading, requests, onRegister, onLeave, onRespond }) {
+  if (!myParking) {
+    return (
+      <div style={{ textAlign: "center", padding: "56px 16px" }}>
+        <div style={{ fontSize: 60, marginBottom: 16 }}>🅿️</div>
+        <div style={{ fontSize: 18, fontWeight: 700, color: "#1e293b", marginBottom: 8 }}>
+          차량이 등록되지 않았습니다
+        </div>
+        <div style={{ fontSize: 14, color: "#64748b", marginBottom: 32, lineHeight: 1.7 }}>
+          주차 후 차량을 등록하면<br />이동 요청 알림을 받을 수 있어요
+        </div>
+        <button
+          onClick={onRegister}
+          style={{
+            background: "linear-gradient(135deg,#3b82f6,#2563eb)", color: "#fff",
+            border: "none", borderRadius: 14, padding: "14px 30px",
+            fontSize: 16, fontWeight: 700, cursor: "pointer",
+          }}
+        >
+          🚗 차량 등록하기
+        </button>
+      </div>
+    );
+  }
+
+  const st = STATUS_INFO[myParking.status] || STATUS_INFO.parked;
+
+  return (
+    <div>
+      {requests.length > 0 && (
+        <div style={{ background: "#fef3c7", border: "1px solid #fde68a", borderRadius: 14, padding: 16, marginBottom: 14 }}>
+          <div style={{ fontWeight: 700, color: "#92400e", marginBottom: 10 }}>🔔 이동 요청이 도착했습니다</div>
+          {requests.map((req) => (
+            <div key={req.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div style={{ fontSize: 14 }}><strong>{req.requesterNickname}</strong>님의 요청</div>
+              <button
+                onClick={() => onRespond(req)}
+                style={{ background: "#f59e0b", color: "#fff", border: "none", borderRadius: 10, padding: "8px 14px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
+              >
+                응답하기
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div style={{ background: "#fff", borderRadius: 16, padding: 20, boxShadow: "0 1px 4px rgba(0,0,0,.06)", border: "1px solid #f1f5f9" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+          <div style={{ fontSize: 13, color: "#64748b" }}>내 차량 정보</div>
+          <span style={{ background: st.bg, color: st.color, fontSize: 12, fontWeight: 600, padding: "4px 10px", borderRadius: 20 }}>
+            {st.label}
+          </span>
+        </div>
+        <div style={{ fontSize: 26, fontWeight: 800, color: "#1e293b", letterSpacing: 1, marginBottom: 4 }}>
+          {myParking.carNumber}
+        </div>
+        <div style={{ fontSize: 14, color: "#64748b", marginBottom: 18 }}>
+          {myParking.carColor}{myParking.carType ? ` · ${myParking.carType}` : ""}
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 20 }}>
+          <InfoBox label="주차 위치" value={`📍 ${myParking.location}`} />
+          <InfoBox label="출차 예정" value={`🕐 ${myParking.expectedLeaveTime || "미정"}`} />
+        </div>
+        {myParking.status === "moving" && (
+          <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 10, padding: 12, marginBottom: 14, fontSize: 14, color: "#15803d", textAlign: "center", fontWeight: 600 }}>
+            🚗 이동 중 — 5분 후 자동 출차 처리됩니다
+          </div>
+        )}
+        <button
+          onClick={onLeave}
+          disabled={loading}
+          style={{
+            width: "100%", padding: 14, border: "2px solid #ef4444", borderRadius: 12,
+            background: "#fff", color: "#ef4444", fontSize: 15, fontWeight: 700,
+            cursor: "pointer", opacity: loading ? 0.7 : 1,
+          }}
+        >
+          {loading ? "처리 중..." : "✅ 출차 완료 (등록 해제)"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function InfoBox({ label, value }) {
+  return (
+    <div style={{ background: "#f8fafc", borderRadius: 10, padding: 12 }}>
+      <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 4 }}>{label}</div>
+      <div style={{ fontSize: 14, fontWeight: 600, color: "#1e293b" }}>{value}</div>
+    </div>
+  );
+}
+
+function Modal({ onClose, title, children }) {
+  return (
+    <div
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+      style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.5)", zIndex: 200, display: "flex", alignItems: "flex-end", justifyContent: "center" }}
+    >
+      <div style={{ background: "#fff", borderRadius: "24px 24px 0 0", padding: 24, width: "100%", maxWidth: 480, maxHeight: "85vh", overflowY: "auto" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+          <div style={{ fontSize: 18, fontWeight: 700 }}>{title}</div>
+          <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 22, cursor: "pointer", color: "#94a3b8", lineHeight: 1 }}>✕</button>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function Field({ label, children }) {
+  return (
+    <div>
+      <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 6 }}>{label}</label>
+      {children}
+    </div>
   );
 }
