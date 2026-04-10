@@ -652,9 +652,9 @@ function LoginScreen({ onLogin }) {
       <div style={{ flex: 1, padding: "32px 24px" }}>
         <div style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: 4, padding: "20px 18px", marginBottom: 28 }}>
           {[
-            ["🚗", "차량 등록", "주차 후 차량 정보와 출차 예정 시간을 등록하세요"],
-            ["🔔", "이동 요청", "이중주차 시 차 빼기 요청을 1초 만에 전송"],
-            ["✅", "빠른 응답", "수락/거절 응답이 즉시 요청자에게 전달됩니다"],
+            ["🚗", "차량 등록", "이중주차 후 차량 정보와 출차 예정 시간을 등록하세요."],
+            ["🔔", "이동 요청", "이중주차된 차량에 이동 요청을 보내고, 알림톡으로 차주에게 전달됩니다."],
+            ["✅", "빠른 응답", "수락, 거절, 예상 소요 시간을 선택하면 결과가 즉시 요청자에게 전달됩니다."],
           ].map(([icon, title, desc]) => (
             <div key={title} style={{ display: "flex", gap: 12, marginBottom: 16 }}>
               <span style={{ fontSize: 20, lineHeight: 1.4 }}>{icon}</span>
