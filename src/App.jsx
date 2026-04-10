@@ -42,14 +42,33 @@ async function patchDoc(col, id, fields) {
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-const ZONES  = ["A구역", "B구역", "C구역", "D구역", "출구 근처", "입구 근처", "기타"];
+const ZONES  = ["제일 안쪽", "중간 쪽", "바깥쪽", "입/출구 근처", "장애인 주차석", "기타"];
 const COLORS = ["흰색", "검정", "회색", "은색", "빨강", "파랑", "노랑", "초록", "기타"];
 
+// Upbit 팔레트
+const C = {
+  navy:    "#0d2050",
+  blue:    "#1763b6",
+  blueLt:  "#eef3fc",
+  bg:      "#f5f6fa",
+  border:  "#e2e6f0",
+  text1:   "#1a1f36",
+  text2:   "#6b7399",
+  text3:   "#9ca3c5",
+  white:   "#ffffff",
+  red:     "#f04251",
+  redLt:   "#fff0f1",
+  green:   "#00a878",
+  greenLt: "#e8faf4",
+  orange:  "#f5a623",
+  orangeLt:"#fff8ec",
+};
+
 const STATUS_INFO = {
-  parked:      { label: "주차중",   color: "#3b82f6", bg: "#eff6ff" },
-  requested:   { label: "요청중",   color: "#f59e0b", bg: "#fef3c7" },
-  moving:      { label: "이동중",   color: "#16a34a", bg: "#f0fdf4" },
-  no_response: { label: "응답없음", color: "#ef4444", bg: "#fef2f2" },
+  parked:      { label: "주차중",   color: C.blue,   bg: C.blueLt   },
+  requested:   { label: "요청중",   color: C.orange, bg: C.orangeLt },
+  moving:      { label: "이동중",   color: C.green,  bg: C.greenLt  },
+  no_response: { label: "응답없음", color: C.red,    bg: C.redLt    },
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -59,8 +78,11 @@ function maskCar(num = "") {
 }
 
 const INP = {
-  width: "100%", padding: "10px 14px", border: "1px solid #e5e7eb",
-  borderRadius: 10, fontSize: 15, boxSizing: "border-box", background: "#fff",
+  width: "100%", padding: "10px 14px",
+  border: `1px solid ${C.border}`,
+  borderRadius: 4, fontSize: 14,
+  boxSizing: "border-box", background: C.white,
+  color: C.text1, outline: "none",
 };
 
 // ─── Main App ─────────────────────────────────────────────────────────────────
@@ -92,7 +114,7 @@ export default function App() {
     setTimeout(() => setToast(null), 3500);
   }
 
-  // ── Firebase ─────────────────────────────────────────────────────────────────
+  // ── Firebase ──────────────────────────────────────────────────────────────────
 
   async function fetchParkings() {
     try {
@@ -119,7 +141,7 @@ export default function App() {
                 op: "AND",
                 filters: [
                   { fieldFilter: { field: { fieldPath: "parkingUserId" }, op: "EQUAL", value: { stringValue: uid } } },
-                  { fieldFilter: { field: { fieldPath: "status" }, op: "EQUAL", value: { stringValue: "pending" } } },
+                  { fieldFilter: { field: { fieldPath: "status"        }, op: "EQUAL", value: { stringValue: "pending" } } },
                 ],
               },
             },
@@ -144,8 +166,8 @@ export default function App() {
   }
 
   async function registerParking() {
-    if (!form.carNumber.trim())    return showToast("차량번호를 입력해주세요", "error");
-    if (!form.expectedLeaveTime)   return showToast("출차 예정 시간을 입력해주세요", "error");
+    if (!form.carNumber.trim())  return showToast("차량번호를 입력해주세요", "error");
+    if (!form.expectedLeaveTime) return showToast("출차 예정 시간을 입력해주세요", "error");
     setLoading(true);
     try {
       if (myParking) await fetch(fsUrl("parkings", myParking.id), { method: "DELETE" });
@@ -153,22 +175,17 @@ export default function App() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(toDoc({
-          userId:             user.id,
-          nickname:           user.nickname,
-          profileImage:       user.profileImage || "",
-          carNumber:          form.carNumber.trim(),
-          carColor:           form.carColor,
-          carType:            form.carType.trim(),
-          location:           form.location,
-          expectedLeaveTime:  form.expectedLeaveTime,
-          status:             "parked",
-          lastRequesterId:    "",
-          lastRequesterNickname: "",
-          createdAt:          new Date().toISOString(),
+          userId: user.id, nickname: user.nickname,
+          profileImage: user.profileImage || "",
+          carNumber: form.carNumber.trim(), carColor: form.carColor,
+          carType: form.carType.trim(), location: form.location,
+          expectedLeaveTime: form.expectedLeaveTime,
+          status: "parked", lastRequesterId: "", lastRequesterNickname: "",
+          createdAt: new Date().toISOString(),
         })),
       });
       if (!res.ok) throw new Error(res.status);
-      showToast("차량이 등록되었습니다 ✓");
+      showToast("차량이 등록되었습니다");
       setShowReg(false);
       setForm({ carNumber: "", carColor: "흰색", carType: "", location: "A구역", expectedLeaveTime: "" });
       await poll();
@@ -189,30 +206,25 @@ export default function App() {
   }
 
   async function sendRequest(parking) {
-    if (parking.userId === user?.id)     return showToast("내 차량입니다", "error");
-    if (parking.status === "moving")     return showToast("이미 이동 중입니다", "error");
-    if (parking.status === "requested")  return showToast("이미 요청이 전송된 차량입니다", "error");
+    if (parking.userId === user?.id)    return showToast("내 차량입니다", "error");
+    if (parking.status === "moving")    return showToast("이미 이동 중입니다", "error");
+    if (parking.status === "requested") return showToast("이미 요청이 전송된 차량입니다", "error");
     setLoading(true);
     try {
       await patchDoc("parkings", parking.id, {
-        status: "requested",
-        lastRequesterId: user.id,
-        lastRequesterNickname: user.nickname,
+        status: "requested", lastRequesterId: user.id, lastRequesterNickname: user.nickname,
       });
       const res = await fetch(fsUrl("requests"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(toDoc({
-          parkingId:          parking.id,
-          parkingUserId:      parking.userId,
-          requesterId:        user.id,
-          requesterNickname:  user.nickname,
-          status:             "pending",
-          createdAt:          new Date().toISOString(),
+          parkingId: parking.id, parkingUserId: parking.userId,
+          requesterId: user.id, requesterNickname: user.nickname,
+          status: "pending", createdAt: new Date().toISOString(),
         })),
       });
       if (!res.ok) throw new Error(res.status);
-      showToast("요청을 보냈습니다! 응답을 기다려주세요 🔔");
+      showToast("요청을 보냈습니다. 응답을 기다려주세요");
       setReqTarget(null);
       await poll();
     } catch { showToast("요청 전송 실패", "error"); }
@@ -229,11 +241,10 @@ export default function App() {
       if (myParking) {
         await patchDoc("parkings", myParking.id, {
           status: accept ? "moving" : "parked",
-          lastRequesterId: "",
-          lastRequesterNickname: "",
+          lastRequesterId: "", lastRequesterNickname: "",
         });
       }
-      showToast(accept ? "수락했습니다. 차량을 이동해주세요 🚗" : "거절했습니다");
+      showToast(accept ? "수락했습니다. 차량을 이동해주세요" : "거절했습니다");
       setRespTarget(null);
       setIncomingReqs((prev) => prev.filter((r) => r.id !== req.id));
       await poll();
@@ -294,13 +305,12 @@ export default function App() {
   const filtered = useMemo(() => {
     if (!search) return parkings;
     const q = search.toLowerCase();
-    return parkings.filter(
-      (p) =>
-        p.carNumber?.toLowerCase().includes(q) ||
-        p.carColor?.includes(q) ||
-        p.carType?.toLowerCase().includes(q) ||
-        p.location?.includes(q) ||
-        p.nickname?.includes(q)
+    return parkings.filter((p) =>
+      p.carNumber?.toLowerCase().includes(q) ||
+      p.carColor?.includes(q) ||
+      p.carType?.toLowerCase().includes(q) ||
+      p.location?.includes(q) ||
+      p.nickname?.includes(q)
     );
   }, [parkings, search]);
 
@@ -309,26 +319,27 @@ export default function App() {
   if (!user) return <LoginScreen onLogin={kakaoLogin} />;
 
   return (
-    <div style={{ minHeight: "100svh", background: "#f8fafc", fontFamily: "system-ui, -apple-system, sans-serif" }}>
+    <div style={{ minHeight: "100svh", background: C.bg, fontFamily: "'Noto Sans KR', system-ui, sans-serif", color: C.text1 }}>
 
-      {/* ── Header ── */}
-      <header style={{ background: "#fff", borderBottom: "1px solid #e5e7eb", padding: "12px 16px", position: "sticky", top: 0, zIndex: 100 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <img src="/image.png" alt="" style={{ width: 34, height: 34, borderRadius: 10 }} />
+      {/* ── Header (업비트 네이비) ── */}
+      <header style={{ background: C.navy, padding: "0 16px" }}>
+        <div style={{ height: 52, display: "flex", alignItems: "center", gap: 10 }}>
           <div style={{ flex: 1 }}>
-            <div style={{ fontWeight: 800, fontSize: 17, color: "#1e293b", lineHeight: 1.2 }}>파킹톡</div>
-            <div style={{ fontSize: 11, color: "#64748b" }}>영덕레스피아 주차장</div>
+            <span style={{ color: C.white, fontWeight: 700, fontSize: 15, letterSpacing: "-0.3px" }}>파킹톡</span>
+            <span style={{ color: "#8899bb", fontSize: 12, marginLeft: 8 }}>이중주차 도우미 앱</span>
           </div>
-          {/* Bell */}
+          {/* 알림 */}
           <button
             onClick={() => incomingReqs.length && setRespTarget(incomingReqs[0])}
-            style={{ position: "relative", background: "none", border: "none", cursor: "pointer", padding: 6, fontSize: 20, lineHeight: 1 }}
+            style={{ position: "relative", background: "none", border: "none", cursor: "pointer", padding: "6px 8px", color: "#8899bb", fontSize: 16 }}
           >
             🔔
             {incomingReqs.length > 0 && (
               <span style={{
-                position: "absolute", top: 2, right: 2, background: "#ef4444", color: "#fff",
-                borderRadius: "50%", width: 16, height: 16, fontSize: 10, fontWeight: 700,
+                position: "absolute", top: 2, right: 2,
+                background: C.red, color: C.white,
+                borderRadius: "50%", width: 14, height: 14,
+                fontSize: 9, fontWeight: 700,
                 display: "flex", alignItems: "center", justifyContent: "center",
               }}>
                 {incomingReqs.length}
@@ -336,27 +347,27 @@ export default function App() {
             )}
           </button>
           {user.profileImage && (
-            <img src={user.profileImage} alt="" style={{ width: 30, height: 30, borderRadius: "50%", border: "2px solid #e5e7eb" }} />
+            <img src={user.profileImage} alt="" style={{ width: 26, height: 26, borderRadius: "50%", border: `1px solid #3a4f7a` }} />
           )}
           <button
             onClick={kakaoLogout}
-            style={{ background: "none", border: "1px solid #e5e7eb", borderRadius: 8, padding: "5px 10px", fontSize: 12, cursor: "pointer", color: "#64748b" }}
+            style={{ background: "none", border: `1px solid #3a4f7a`, borderRadius: 3, padding: "4px 10px", fontSize: 11, cursor: "pointer", color: "#8899bb" }}
           >
             로그아웃
           </button>
         </div>
       </header>
 
-      {/* ── Incoming request banner ── */}
+      {/* ── 이동 요청 알림 배너 ── */}
       {incomingReqs.length > 0 && (
-        <div style={{ background: "#fef3c7", borderBottom: "1px solid #fde68a", padding: "10px 16px" }}>
+        <div style={{ background: "#fff8ec", borderBottom: `1px solid #fde2a0`, padding: "9px 16px" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <span style={{ fontSize: 14, color: "#92400e", fontWeight: 600 }}>
-              🔔 {incomingReqs[0].requesterNickname}님이 차량 이동을 요청했습니다
+            <span style={{ fontSize: 13, color: "#b05e00", fontWeight: 600 }}>
+              ▲ {incomingReqs[0].requesterNickname}님이 차량 이동을 요청했습니다
             </span>
             <button
               onClick={() => setRespTarget(incomingReqs[0])}
-              style={{ background: "#f59e0b", color: "#fff", border: "none", borderRadius: 8, padding: "6px 14px", fontSize: 13, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap", marginLeft: 10 }}
+              style={{ background: C.orange, color: C.white, border: "none", borderRadius: 3, padding: "5px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer", marginLeft: 12 }}
             >
               응답하기
             </button>
@@ -364,62 +375,91 @@ export default function App() {
         </div>
       )}
 
-      {/* ── Tabs ── */}
-      <div style={{ background: "#fff", borderBottom: "1px solid #e5e7eb" }}>
+      {/* ── 탭 ── */}
+      <div style={{ background: C.white, borderBottom: `1px solid ${C.border}` }}>
         <div style={{ display: "flex" }}>
           {[["list", "주차 현황"], ["mine", "내 차량"]].map(([k, label]) => (
             <button
               key={k}
               onClick={() => setTab(k)}
               style={{
-                flex: 1, padding: "13px 0", border: "none", background: "none", cursor: "pointer",
-                fontSize: 14, fontWeight: tab === k ? 700 : 400,
-                color: tab === k ? "#3b82f6" : "#64748b",
-                borderBottom: `2px solid ${tab === k ? "#3b82f6" : "transparent"}`,
+                flex: 1, padding: "14px 0", border: "none", background: "none", cursor: "pointer",
+                fontSize: 13, fontWeight: tab === k ? 700 : 400,
+                color: tab === k ? C.blue : C.text2,
+                borderBottom: `2px solid ${tab === k ? C.blue : "transparent"}`,
+                transition: "color .15s",
               }}
             >
               {label}
               {k === "mine" && myParking && (
-                <span style={{ marginLeft: 6, background: "#3b82f6", color: "#fff", borderRadius: 10, fontSize: 11, padding: "1px 6px" }}>등록</span>
+                <span style={{ marginLeft: 5, background: C.blue, color: C.white, borderRadius: 2, fontSize: 10, padding: "1px 5px", fontWeight: 700 }}>등록</span>
               )}
             </button>
           ))}
         </div>
       </div>
 
-      {/* ── Content ── */}
-      <div style={{ padding: 16 }}>
+      {/* ── 컨텐츠 ── */}
+      <div style={{ padding: "14px 14px 80px" }}>
 
+        {/* 주차 현황 탭 */}
         {tab === "list" && (
           <>
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="차량번호, 색상, 위치로 검색..."
-              style={{ ...INP, marginBottom: 14 }}
-            />
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16 }}>
-              <StatBox label="주차 차량" value={parkings.length}                                   color="#3b82f6" bg="#eff6ff" />
-              <StatBox label="이동 중"   value={parkings.filter((p) => p.status === "moving").length} color="#16a34a" bg="#f0fdf4" />
+            {/* 검색 */}
+            <div style={{ position: "relative", marginBottom: 12 }}>
+              <span style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)", color: C.text3, fontSize: 14, pointerEvents: "none" }}>
+             <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="none" viewBox="0 0 15 15"><circle cx="7" cy="7" r="5.7" stroke="currentColor" stroke-width="1.4"></circle><path fill="currentColor" d="M13.505 14.495a.7.7 0 0 0 .99-.99L14 14zM10.5 10.5l-.495.495 3.5 3.5L14 14l.495-.495-3.5-3.5z"></path></svg>
+              </span>
+             
+             
+             
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="차량번호, 색상, 위치로 검색"
+                style={{ ...INP, paddingLeft: 32 }}
+              />
             </div>
+
+            {/* 지수 박스 (업비트 스타일) */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 14 }}>
+              <IndexBox label="주차 차량" value={parkings.length} unit="대" color={C.blue} />
+              <IndexBox label="이동 중" value={parkings.filter((p) => p.status === "moving").length} unit="대" color={C.green} />
+            </div>
+
+            {/* 리스트 헤더 */}
+            <div style={{
+              background: C.white, border: `1px solid ${C.border}`,
+              borderBottom: "none", borderRadius: "4px 4px 0 0",
+              padding: "8px 14px",
+              display: "grid", gridTemplateColumns: "2fr 1fr 1.2fr 1fr",
+              gap: 8, fontSize: 11, color: C.text3, fontWeight: 600,
+            }}>
+              <span>차량번호 / 정보</span>
+              <span>위치</span>
+              <span>출차 예정</span>
+              <span style={{ textAlign: "right" }}>상태</span>
+            </div>
+
             {filtered.length === 0 ? (
-              <div style={{ textAlign: "center", padding: "52px 0", color: "#94a3b8" }}>
-                <div style={{ fontSize: 52 }}>🚗</div>
-                <div style={{ marginTop: 12, fontSize: 15 }}>
+              <div style={{
+                background: C.white, border: `1px solid ${C.border}`,
+                borderRadius: "0 0 4px 4px",
+                textAlign: "center", padding: "48px 0", color: C.text3,
+              }}>
+                <div style={{ fontSize: 14 }}>
                   {parkings.length === 0 ? "등록된 차량이 없습니다" : "검색 결과가 없습니다"}
                 </div>
-                {parkings.length === 0 && (
-                  <div style={{ fontSize: 13, marginTop: 6, color: "#cbd5e1" }}>주차 후 아래 버튼으로 차량을 등록하세요</div>
-                )}
               </div>
             ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                {filtered.map((p) => (
-                  <ParkingCard
+              <div style={{ border: `1px solid ${C.border}`, borderRadius: "0 0 4px 4px", overflow: "hidden" }}>
+                {filtered.map((p, i) => (
+                  <ParkingRow
                     key={p.id}
                     parking={p}
                     userId={user.id}
                     onRequest={() => setReqTarget(p)}
+                    isLast={i === filtered.length - 1}
                   />
                 ))}
               </div>
@@ -427,6 +467,7 @@ export default function App() {
           </>
         )}
 
+        {/* 내 차량 탭 */}
         {tab === "mine" && (
           <MyTab
             myParking={myParking}
@@ -439,26 +480,28 @@ export default function App() {
         )}
       </div>
 
-      {/* ── FAB ── */}
+      {/* ── 등록 FAB ── */}
       {!myParking && (
-        <button
-          onClick={() => setShowReg(true)}
-          style={{
-            position: "fixed", bottom: 24, left: "50%", transform: "translateX(-50%)",
-            background: "linear-gradient(135deg,#3b82f6,#2563eb)", color: "#fff",
-            border: "none", borderRadius: 24, padding: "14px 28px",
-            fontSize: 15, fontWeight: 700, cursor: "pointer",
-            boxShadow: "0 4px 16px rgba(59,130,246,.4)", whiteSpace: "nowrap",
-          }}
-        >
-          🚗 내 차량 등록하기
-        </button>
+        <div style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 480, padding: "12px 14px", background: C.bg, borderTop: `1px solid ${C.border}` }}>
+          <button
+            onClick={() => setShowReg(true)}
+            style={{
+              width: "100%", padding: "13px 0",
+              background: C.blue, color: C.white,
+              border: "none", borderRadius: 4,
+              fontSize: 14, fontWeight: 700, cursor: "pointer",
+              letterSpacing: "-0.2px",
+            }}
+          >
+            내 차량 등록하기
+          </button>
+        </div>
       )}
 
-      {/* ── Register Modal ── */}
+      {/* ── 차량 등록 모달 ── */}
       {showReg && (
         <Modal onClose={() => setShowReg(false)} title="내 차량 등록">
-          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             <Field label="차량번호 *">
               <input
                 value={form.carNumber}
@@ -467,19 +510,21 @@ export default function App() {
                 style={INP}
               />
             </Field>
-            <Field label="차량 색상">
-              <select value={form.carColor} onChange={(e) => setForm((f) => ({ ...f, carColor: e.target.value }))} style={INP}>
-                {COLORS.map((c) => <option key={c}>{c}</option>)}
-              </select>
-            </Field>
-            <Field label="차종 (선택)">
-              <input
-                value={form.carType}
-                onChange={(e) => setForm((f) => ({ ...f, carType: e.target.value }))}
-                placeholder="예: SUV, 세단, 트럭..."
-                style={INP}
-              />
-            </Field>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <Field label="차량 색상">
+                <select value={form.carColor} onChange={(e) => setForm((f) => ({ ...f, carColor: e.target.value }))} style={INP}>
+                  {COLORS.map((c) => <option key={c}>{c}</option>)}
+                </select>
+              </Field>
+              <Field label="차종 (선택)">
+                <input
+                  value={form.carType}
+                  onChange={(e) => setForm((f) => ({ ...f, carType: e.target.value }))}
+                  placeholder="SUV, 세단..."
+                  style={INP}
+                />
+              </Field>
+            </div>
             <Field label="주차 위치">
               <select value={form.location} onChange={(e) => setForm((f) => ({ ...f, location: e.target.value }))} style={INP}>
                 {ZONES.map((z) => <option key={z}>{z}</option>)}
@@ -497,10 +542,10 @@ export default function App() {
               onClick={registerParking}
               disabled={loading}
               style={{
-                background: "linear-gradient(135deg,#3b82f6,#2563eb)", color: "#fff",
-                border: "none", borderRadius: 12, padding: 14,
-                fontSize: 16, fontWeight: 700, cursor: "pointer", marginTop: 4,
-                opacity: loading ? 0.7 : 1,
+                width: "100%", padding: "13px 0",
+                background: loading ? C.text3 : C.blue,
+                color: C.white, border: "none", borderRadius: 4,
+                fontSize: 14, fontWeight: 700, cursor: "pointer", marginTop: 4,
               }}
             >
               {loading ? "등록 중..." : "등록 완료"}
@@ -509,72 +554,66 @@ export default function App() {
         </Modal>
       )}
 
-      {/* ── Request Confirm Modal ── */}
+      {/* ── 요청 확인 모달 ── */}
       {reqTarget && (
         <Modal onClose={() => setReqTarget(null)} title="이동 요청">
-          <div style={{ textAlign: "center" }}>
-            <div style={{ fontSize: 52, marginBottom: 14 }}>🚗</div>
-            <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 8 }}>
-              {maskCar(reqTarget.carNumber)} 차량에 이동 요청
+          <div style={{ padding: "8px 0" }}>
+            <div style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: 4, padding: "14px 16px", marginBottom: 20 }}>
+              <div style={{ fontSize: 13, color: C.text2, marginBottom: 6 }}>요청 대상 차량</div>
+              <div style={{ fontSize: 20, fontWeight: 700, color: C.text1, letterSpacing: 1 }}>{maskCar(reqTarget.carNumber)}</div>
+              <div style={{ fontSize: 13, color: C.text2, marginTop: 4 }}>
+                {reqTarget.carColor}{reqTarget.carType ? ` · ${reqTarget.carType}` : ""} &nbsp;|&nbsp; 📍 {reqTarget.location}
+              </div>
+              <div style={{ fontSize: 13, color: C.text2, marginTop: 2 }}>차주: {reqTarget.nickname}</div>
             </div>
-            <div style={{ fontSize: 14, color: "#64748b", marginBottom: 4 }}>위치: {reqTarget.location}</div>
-            <div style={{ fontSize: 14, color: "#64748b", marginBottom: 28 }}>
-              {reqTarget.nickname}님에게 알림을 보냅니다
-            </div>
-            <div style={{ display: "flex", gap: 10 }}>
+            <p style={{ fontSize: 13, color: C.text2, margin: "0 0 20px", textAlign: "center" }}>
+              위 차량 소유자에게 이동 알림을 전송합니다.
+            </p>
+            <div style={{ display: "flex", gap: 8 }}>
               <button
                 onClick={() => setReqTarget(null)}
-                style={{ flex: 1, padding: 13, border: "1px solid #e5e7eb", borderRadius: 12, background: "#fff", fontSize: 15, cursor: "pointer" }}
+                style={{ flex: 1, padding: 12, border: `1px solid ${C.border}`, borderRadius: 4, background: C.white, fontSize: 14, cursor: "pointer", color: C.text2 }}
               >
                 취소
               </button>
               <button
                 onClick={() => sendRequest(reqTarget)}
                 disabled={loading}
-                style={{
-                  flex: 1, padding: 13, background: "linear-gradient(135deg,#f59e0b,#d97706)",
-                  color: "#fff", border: "none", borderRadius: 12,
-                  fontSize: 15, fontWeight: 700, cursor: "pointer", opacity: loading ? 0.7 : 1,
-                }}
+                style={{ flex: 2, padding: 12, background: loading ? C.text3 : C.blue, color: C.white, border: "none", borderRadius: 4, fontSize: 14, fontWeight: 700, cursor: "pointer" }}
               >
-                {loading ? "전송 중..." : "요청 보내기"}
+                {loading ? "전송 중..." : "이동 요청 보내기"}
               </button>
             </div>
           </div>
         </Modal>
       )}
 
-      {/* ── Response Modal ── */}
+      {/* ── 응답 모달 ── */}
       {respTarget && (
-        <Modal onClose={() => setRespTarget(null)} title="이동 요청 도착">
-          <div style={{ textAlign: "center" }}>
-            <div style={{ fontSize: 52, marginBottom: 14 }}>🔔</div>
-            <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 10 }}>
-              {respTarget.requesterNickname}님이<br />차량 이동을 요청했습니다
+        <Modal onClose={() => setRespTarget(null)} title="이동 요청 수신">
+          <div style={{ padding: "8px 0" }}>
+            <div style={{ background: C.orangeLt, border: `1px solid #fde2a0`, borderRadius: 4, padding: "14px 16px", marginBottom: 20 }}>
+              <div style={{ fontSize: 13, color: "#b05e00", fontWeight: 600 }}>
+                ▲ {respTarget.requesterNickname}님이 차량 이동을 요청했습니다
+              </div>
             </div>
-            <div style={{ fontSize: 14, color: "#64748b", marginBottom: 28 }}>어떻게 하시겠어요?</div>
-            <div style={{ display: "flex", gap: 10 }}>
+            <p style={{ fontSize: 13, color: C.text2, margin: "0 0 20px", textAlign: "center" }}>
+              어떻게 하시겠어요?
+            </p>
+            <div style={{ display: "flex", gap: 8 }}>
               <button
                 onClick={() => respondToRequest(respTarget, false)}
                 disabled={loading}
-                style={{
-                  flex: 1, padding: 13, border: "2px solid #ef4444", borderRadius: 12,
-                  background: "#fff", fontSize: 14, fontWeight: 600, cursor: "pointer", color: "#ef4444",
-                  opacity: loading ? 0.7 : 1,
-                }}
+                style={{ flex: 1, padding: 12, border: `1px solid ${C.red}`, borderRadius: 4, background: C.white, fontSize: 13, fontWeight: 600, cursor: "pointer", color: C.red }}
               >
                 지금은 못 빼요
               </button>
               <button
                 onClick={() => respondToRequest(respTarget, true)}
                 disabled={loading}
-                style={{
-                  flex: 1, padding: 13, background: "linear-gradient(135deg,#16a34a,#15803d)",
-                  color: "#fff", border: "none", borderRadius: 12,
-                  fontSize: 14, fontWeight: 700, cursor: "pointer", opacity: loading ? 0.7 : 1,
-                }}
+                style={{ flex: 1, padding: 12, background: loading ? C.text3 : C.green, color: C.white, border: "none", borderRadius: 4, fontSize: 13, fontWeight: 700, cursor: "pointer" }}
               >
-                지금 빼러 갈게요!
+                지금 빼러 갈게요
               </button>
             </div>
           </div>
@@ -585,10 +624,10 @@ export default function App() {
       {toast && (
         <div style={{
           position: "fixed", bottom: 80, left: "50%", transform: "translateX(-50%)",
-          background: toast.type === "error" ? "#ef4444" : "#1e293b",
-          color: "#fff", padding: "12px 20px", borderRadius: 12,
-          fontSize: 14, zIndex: 999, whiteSpace: "nowrap",
-          boxShadow: "0 4px 12px rgba(0,0,0,.2)",
+          background: toast.type === "error" ? C.red : C.navy,
+          color: C.white, padding: "10px 18px", borderRadius: 4,
+          fontSize: 13, zIndex: 999, whiteSpace: "nowrap",
+          boxShadow: "0 4px 12px rgba(0,0,0,.25)",
         }}>
           {toast.msg}
         </div>
@@ -601,108 +640,128 @@ export default function App() {
 
 function LoginScreen({ onLogin }) {
   return (
-    <div style={{
-      minHeight: "100svh", display: "flex", flexDirection: "column",
-      alignItems: "center", justifyContent: "center",
-      background: "#f8fafc", padding: 24, textAlign: "center",
-    }}>
-      <img
-        src="/image.png"
-        alt=""
-        style={{ width: 90, height: 90, borderRadius: 24, marginBottom: 22, boxShadow: "0 8px 24px rgba(59,130,246,.2)" }}
-      />
-      <h1 style={{ fontSize: 30, fontWeight: 800, margin: "0 0 8px", color: "#1e293b" }}>파킹톡</h1>
-      <p style={{ color: "#64748b", margin: "0 0 6px", fontSize: 15 }}>영덕레스피아 공원 주차장</p>
-      <p style={{ color: "#94a3b8", margin: "0 0 44px", fontSize: 13, lineHeight: 1.7 }}>
-        전화 없이 빠르게 차 이동 요청<br />이중주차 문제를 쉽게 해결하세요
-      </p>
-      <button
-        onClick={onLogin}
-        style={{
-          background: "#FEE500", color: "#191919", border: "none", borderRadius: 14,
-          padding: "15px 36px", fontSize: 16, fontWeight: 700, cursor: "pointer",
-          display: "flex", alignItems: "center", gap: 10,
-          boxShadow: "0 4px 14px rgba(254,229,0,.5)",
-        }}
-      >
-        <span style={{ fontSize: 22 }}>💬</span>
-        카카오로 시작하기
-      </button>
-      <p style={{ marginTop: 20, fontSize: 12, color: "#cbd5e1" }}>
-        로그인 시 차량 등록 및 요청 기능이 활성화됩니다
-      </p>
+    <div style={{ minHeight: "100svh", display: "flex", flexDirection: "column", background: C.white }}>
+      {/* 상단 네이비 영역 */}
+      <div style={{ background: C.navy, padding: "56px 28px 48px", textAlign: "center" }}>
+        <img src="/image.png" alt="" style={{ width: 72, height: 72, borderRadius: 16, marginBottom: 20, border: `2px solid #3a4f7a` }} />
+        <h1 style={{ fontSize: 26, fontWeight: 800, margin: "0 0 6px", color: C.white, letterSpacing: "-0.5px" }}>파킹톡</h1>
+        <p style={{ color: "#8899bb", margin: 0, fontSize: 13 }}>이중주차 도우미 앱</p>
+      </div>
+
+      {/* 설명 카드 */}
+      <div style={{ flex: 1, padding: "32px 24px" }}>
+        <div style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: 4, padding: "20px 18px", marginBottom: 28 }}>
+          {[
+            ["🚗", "차량 등록", "주차 후 차량 정보와 출차 예정 시간을 등록하세요"],
+            ["🔔", "이동 요청", "이중주차 시 차 빼기 요청을 1초 만에 전송"],
+            ["✅", "빠른 응답", "수락/거절 응답이 즉시 요청자에게 전달됩니다"],
+          ].map(([icon, title, desc]) => (
+            <div key={title} style={{ display: "flex", gap: 12, marginBottom: 16 }}>
+              <span style={{ fontSize: 20, lineHeight: 1.4 }}>{icon}</span>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: C.text1, marginBottom: 2 }}>{title}</div>
+                <div style={{ fontSize: 12, color: C.text2, lineHeight: 1.5 }}>{desc}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <button
+          onClick={onLogin}
+          style={{
+            width: "100%", padding: "14px 0",
+            background: "#FEE500", color: "#191919",
+            border: "none", borderRadius: 4,
+            fontSize: 15, fontWeight: 700, cursor: "pointer",
+            display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+          }}
+        >
+          <span style={{ fontSize: 18 }}></span>
+          카카오로 시작하기
+        </button>
+      </div>
     </div>
   );
 }
 
-function StatBox({ label, value, color, bg }) {
+function IndexBox({ label, value, unit, color }) {
   return (
-    <div style={{ background: bg, borderRadius: 14, padding: 14, textAlign: "center" }}>
-      <div style={{ fontSize: 28, fontWeight: 800, color }}>{value}</div>
-      <div style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>{label}</div>
+    <div style={{
+      background: C.white, border: `1px solid ${C.border}`,
+      borderRadius: 4, padding: "14px 16px",
+    }}>
+      <div style={{ fontSize: 11, color: C.text3, marginBottom: 6, fontWeight: 600 }}>{label}</div>
+      <div style={{ display: "flex", alignItems: "baseline", gap: 4 }}>
+        <span style={{ fontSize: 26, fontWeight: 800, color, lineHeight: 1 }}>{value}</span>
+        <span style={{ fontSize: 12, color: C.text2 }}>{unit}</span>
+      </div>
     </div>
   );
 }
 
-function ParkingCard({ parking, userId, onRequest }) {
+function ParkingRow({ parking, userId, onRequest, isLast }) {
   const st = STATUS_INFO[parking.status] || STATUS_INFO.parked;
-  const isOwner     = parking.userId === userId;
-  const iRequested  = parking.lastRequesterId === userId;
+  const isOwner    = parking.userId === userId;
+  const iRequested = parking.lastRequesterId === userId;
 
   return (
     <div style={{
-      background: "#fff", borderRadius: 16, padding: 16,
-      boxShadow: "0 1px 4px rgba(0,0,0,.06)", border: "1px solid #f1f5f9",
+      background: C.white,
+      borderBottom: isLast ? "none" : `1px solid ${C.border}`,
+      padding: "12px 14px",
     }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
+      <div style={{
+        display: "grid", gridTemplateColumns: "2fr 1fr 1.2fr 1fr",
+        gap: 8, alignItems: "center",
+      }}>
+        {/* 차량번호/정보 */}
         <div>
-          <div style={{ fontSize: 20, fontWeight: 800, color: "#1e293b", letterSpacing: 1 }}>
-            {maskCar(parking.carNumber) || "번호 미등록"}
+          <div style={{ fontSize: 15, fontWeight: 700, color: C.text1, letterSpacing: "0.5px" }}>
+            {maskCar(parking.carNumber) || "-"}
           </div>
-          <div style={{ fontSize: 13, color: "#64748b", marginTop: 2 }}>
+          <div style={{ fontSize: 11, color: C.text3, marginTop: 2 }}>
             {parking.carColor}{parking.carType ? ` · ${parking.carType}` : ""}
           </div>
+          <div style={{ fontSize: 11, color: C.text3 }}>{parking.nickname}</div>
         </div>
+        {/* 위치 */}
+        <div style={{ fontSize: 12, color: C.text2 }}>{parking.location}</div>
+        {/* 출차 예정 */}
+        <div style={{ fontSize: 12, color: C.text2 }}>
+          {parking.expectedLeaveTime || "미정"}
+        </div>
+        {/* 상태 / 버튼 */}
+        <div style={{ textAlign: "right" }}>
+          {isOwner ? (
+            <span style={{ fontSize: 11, fontWeight: 700, color: C.blue, background: C.blueLt, padding: "3px 8px", borderRadius: 2 }}>내 차량</span>
+          ) : parking.status === "moving" ? (
+            <span style={{ fontSize: 11, color: C.green, fontWeight: 700 }}>이동 중</span>
+          ) : iRequested ? (
+            <span style={{ fontSize: 11, color: C.orange, fontWeight: 700 }}>대기 중</span>
+          ) : parking.status === "requested" ? (
+            <span style={{ fontSize: 11, color: C.text3 }}>처리 중</span>
+          ) : (
+            <button
+              onClick={onRequest}
+              style={{
+                background: C.blue, color: C.white,
+                border: "none", borderRadius: 3,
+                padding: "5px 10px", fontSize: 11, fontWeight: 700, cursor: "pointer",
+              }}
+            >
+              이동요청
+            </button>
+          )}
+        </div>
+      </div>
+      {/* 상태 뱃지 */}
+      <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 6 }}>
         <span style={{
-          background: st.bg, color: st.color,
-          fontSize: 12, fontWeight: 600, padding: "4px 10px", borderRadius: 20,
-          whiteSpace: "nowrap",
+          fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 2,
+          color: st.color, background: st.bg,
         }}>
           {st.label}
         </span>
-      </div>
-
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 14, marginBottom: 12 }}>
-        <span style={{ fontSize: 13, color: "#475569" }}>📍 {parking.location}</span>
-        <span style={{ fontSize: 13, color: "#475569" }}>
-          🕐 {parking.expectedLeaveTime ? `${parking.expectedLeaveTime} 출차 예정` : "출차 시간 미정"}
-        </span>
-      </div>
-
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <span style={{ fontSize: 12, color: "#94a3b8" }}>{parking.nickname}</span>
-        {isOwner ? (
-          <span style={{ fontSize: 12, fontWeight: 600, color: "#3b82f6", background: "#eff6ff", padding: "4px 10px", borderRadius: 20 }}>
-            내 차량
-          </span>
-        ) : parking.status === "moving" ? (
-          <span style={{ fontSize: 13, color: "#16a34a", fontWeight: 600 }}>이동 중...</span>
-        ) : iRequested ? (
-          <span style={{ fontSize: 13, color: "#f59e0b", fontWeight: 600 }}>응답 대기 중...</span>
-        ) : parking.status === "requested" ? (
-          <span style={{ fontSize: 13, color: "#94a3b8" }}>다른 요청 처리 중</span>
-        ) : (
-          <button
-            onClick={onRequest}
-            style={{
-              background: "linear-gradient(135deg,#f59e0b,#d97706)", color: "#fff",
-              border: "none", borderRadius: 10, padding: "8px 14px",
-              fontSize: 13, fontWeight: 600, cursor: "pointer",
-            }}
-          >
-            차 빼기 요청
-          </button>
-        )}
       </div>
     </div>
   );
@@ -711,23 +770,18 @@ function ParkingCard({ parking, userId, onRequest }) {
 function MyTab({ myParking, loading, requests, onRegister, onLeave, onRespond }) {
   if (!myParking) {
     return (
-      <div style={{ textAlign: "center", padding: "56px 16px" }}>
-        <div style={{ fontSize: 60, marginBottom: 16 }}>🅿️</div>
-        <div style={{ fontSize: 18, fontWeight: 700, color: "#1e293b", marginBottom: 8 }}>
-          차량이 등록되지 않았습니다
-        </div>
-        <div style={{ fontSize: 14, color: "#64748b", marginBottom: 32, lineHeight: 1.7 }}>
-          주차 후 차량을 등록하면<br />이동 요청 알림을 받을 수 있어요
+      <div>
+        <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 4, padding: "36px 20px", textAlign: "center", marginBottom: 12 }}>
+          <div style={{ fontSize: 16, fontWeight: 700, color: C.text1, marginBottom: 8 }}>등록된 차량이 없습니다</div>
+          <div style={{ fontSize: 13, color: C.text2, lineHeight: 1.7 }}>
+            주차 후 차량을 등록하면<br />이동 요청 알림을 받을 수 있습니다
+          </div>
         </div>
         <button
           onClick={onRegister}
-          style={{
-            background: "linear-gradient(135deg,#3b82f6,#2563eb)", color: "#fff",
-            border: "none", borderRadius: 14, padding: "14px 30px",
-            fontSize: 16, fontWeight: 700, cursor: "pointer",
-          }}
+          style={{ width: "100%", padding: "13px 0", background: C.blue, color: C.white, border: "none", borderRadius: 4, fontSize: 14, fontWeight: 700, cursor: "pointer" }}
         >
-          🚗 차량 등록하기
+          내 차량 등록하기
         </button>
       </div>
     );
@@ -736,16 +790,17 @@ function MyTab({ myParking, loading, requests, onRegister, onLeave, onRespond })
   const st = STATUS_INFO[myParking.status] || STATUS_INFO.parked;
 
   return (
-    <div>
+    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      {/* 요청 알림 */}
       {requests.length > 0 && (
-        <div style={{ background: "#fef3c7", border: "1px solid #fde68a", borderRadius: 14, padding: 16, marginBottom: 14 }}>
-          <div style={{ fontWeight: 700, color: "#92400e", marginBottom: 10 }}>🔔 이동 요청이 도착했습니다</div>
+        <div style={{ background: C.orangeLt, border: `1px solid #fde2a0`, borderRadius: 4, padding: "12px 14px" }}>
+          <div style={{ fontWeight: 700, color: "#b05e00", fontSize: 13, marginBottom: 10 }}>▲ 이동 요청이 도착했습니다</div>
           {requests.map((req) => (
             <div key={req.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <div style={{ fontSize: 14 }}><strong>{req.requesterNickname}</strong>님의 요청</div>
+              <span style={{ fontSize: 13, color: C.text1 }}><b>{req.requesterNickname}</b>님의 요청</span>
               <button
                 onClick={() => onRespond(req)}
-                style={{ background: "#f59e0b", color: "#fff", border: "none", borderRadius: 10, padding: "8px 14px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
+                style={{ background: C.orange, color: C.white, border: "none", borderRadius: 3, padding: "6px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}
               >
                 응답하기
               </button>
@@ -754,49 +809,58 @@ function MyTab({ myParking, loading, requests, onRegister, onLeave, onRespond })
         </div>
       )}
 
-      <div style={{ background: "#fff", borderRadius: 16, padding: 20, boxShadow: "0 1px 4px rgba(0,0,0,.06)", border: "1px solid #f1f5f9" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-          <div style={{ fontSize: 13, color: "#64748b" }}>내 차량 정보</div>
-          <span style={{ background: st.bg, color: st.color, fontSize: 12, fontWeight: 600, padding: "4px 10px", borderRadius: 20 }}>
+      {/* 내 차량 카드 */}
+      <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 4 }}>
+        {/* 카드 헤더 */}
+        <div style={{ padding: "12px 16px", borderBottom: `1px solid ${C.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span style={{ fontSize: 12, color: C.text2, fontWeight: 600 }}>내 차량 정보</span>
+          <span style={{ fontSize: 11, fontWeight: 700, color: st.color, background: st.bg, padding: "2px 8px", borderRadius: 2 }}>
             {st.label}
           </span>
         </div>
-        <div style={{ fontSize: 26, fontWeight: 800, color: "#1e293b", letterSpacing: 1, marginBottom: 4 }}>
-          {myParking.carNumber}
-        </div>
-        <div style={{ fontSize: 14, color: "#64748b", marginBottom: 18 }}>
-          {myParking.carColor}{myParking.carType ? ` · ${myParking.carType}` : ""}
-        </div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 20 }}>
-          <InfoBox label="주차 위치" value={`📍 ${myParking.location}`} />
-          <InfoBox label="출차 예정" value={`🕐 ${myParking.expectedLeaveTime || "미정"}`} />
-        </div>
-        {myParking.status === "moving" && (
-          <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 10, padding: 12, marginBottom: 14, fontSize: 14, color: "#15803d", textAlign: "center", fontWeight: 600 }}>
-            🚗 이동 중 — 5분 후 자동 출차 처리됩니다
-          </div>
-        )}
-        <button
-          onClick={onLeave}
-          disabled={loading}
-          style={{
-            width: "100%", padding: 14, border: "2px solid #ef4444", borderRadius: 12,
-            background: "#fff", color: "#ef4444", fontSize: 15, fontWeight: 700,
-            cursor: "pointer", opacity: loading ? 0.7 : 1,
-          }}
-        >
-          {loading ? "처리 중..." : "✅ 출차 완료 (등록 해제)"}
-        </button>
-      </div>
-    </div>
-  );
-}
 
-function InfoBox({ label, value }) {
-  return (
-    <div style={{ background: "#f8fafc", borderRadius: 10, padding: 12 }}>
-      <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 4 }}>{label}</div>
-      <div style={{ fontSize: 14, fontWeight: 600, color: "#1e293b" }}>{value}</div>
+        {/* 차량 상세 */}
+        <div style={{ padding: "16px" }}>
+          <div style={{ fontSize: 24, fontWeight: 800, color: C.text1, letterSpacing: 1, marginBottom: 4 }}>
+            {myParking.carNumber}
+          </div>
+          <div style={{ fontSize: 13, color: C.text2, marginBottom: 16 }}>
+            {myParking.carColor}{myParking.carType ? ` · ${myParking.carType}` : ""}
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 16 }}>
+            {[
+              ["주차 위치", myParking.location],
+              ["출차 예정", myParking.expectedLeaveTime || "미정"],
+            ].map(([label, val]) => (
+              <div key={label} style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: 4, padding: "10px 12px" }}>
+                <div style={{ fontSize: 10, color: C.text3, marginBottom: 4, fontWeight: 600 }}>{label}</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: C.text1 }}>{val}</div>
+              </div>
+            ))}
+          </div>
+
+          {myParking.status === "moving" && (
+            <div style={{ background: C.greenLt, border: `1px solid #a7e9d5`, borderRadius: 4, padding: "10px 14px", marginBottom: 14, fontSize: 13, color: C.green, fontWeight: 600 }}>
+              ▲ 이동 중 — 5분 후 자동 출차 처리됩니다
+            </div>
+          )}
+
+          <button
+            onClick={onLeave}
+            disabled={loading}
+            style={{
+              width: "100%", padding: 12,
+              border: `1px solid ${C.red}`, borderRadius: 4,
+              background: C.white, color: C.red,
+              fontSize: 13, fontWeight: 700, cursor: "pointer",
+              opacity: loading ? 0.6 : 1,
+            }}
+          >
+            {loading ? "처리 중..." : "출차 완료 (등록 해제)"}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -805,12 +869,12 @@ function Modal({ onClose, title, children }) {
   return (
     <div
       onClick={(e) => e.target === e.currentTarget && onClose()}
-      style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.5)", zIndex: 200, display: "flex", alignItems: "flex-end", justifyContent: "center" }}
+      style={{ position: "fixed", inset: 0, background: "rgba(13,32,80,.5)", zIndex: 200, display: "flex", alignItems: "flex-end", justifyContent: "center" }}
     >
-      <div style={{ background: "#fff", borderRadius: "24px 24px 0 0", padding: 24, width: "100%", maxWidth: 480, maxHeight: "85vh", overflowY: "auto" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-          <div style={{ fontSize: 18, fontWeight: 700 }}>{title}</div>
-          <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 22, cursor: "pointer", color: "#94a3b8", lineHeight: 1 }}>✕</button>
+      <div style={{ background: C.white, borderRadius: "12px 12px 0 0", padding: "20px 18px 28px", width: "100%", maxWidth: 480, maxHeight: "88vh", overflowY: "auto" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
+          <div style={{ fontSize: 16, fontWeight: 700, color: C.text1 }}>{title}</div>
+          <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 18, cursor: "pointer", color: C.text3, lineHeight: 1 }}>✕</button>
         </div>
         {children}
       </div>
@@ -821,7 +885,7 @@ function Modal({ onClose, title, children }) {
 function Field({ label, children }) {
   return (
     <div>
-      <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 6 }}>{label}</label>
+      <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: C.text2, marginBottom: 6 }}>{label}</label>
       {children}
     </div>
   );
